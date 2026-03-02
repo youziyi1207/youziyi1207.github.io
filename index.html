@@ -365,6 +365,13 @@
 
     <script>
         // 全局配置
+        // const GIST_ID_KEY = "myLifeRecordsGistId";
+        // const GITHUB_TOKEN_KEY = "githubToken";
+        // const BG_IMAGE_KEY = "bgImageUrl";
+        // let currentEditId = null;
+        // let previewFiles = { image: null, video: null };
+        // let bgImageFile = null;
+        // 全局配置
         const GIST_ID_KEY = "myLifeRecordsGistId";
         const GITHUB_TOKEN_KEY = "githubToken";
         const BG_IMAGE_KEY = "bgImageUrl";
@@ -380,8 +387,13 @@
                 document.getElementById("authOverlay").classList.remove("hidden");
                 return;
             }
-            
-            // 加载背景
+            // 优先用代码里的Token，没有再读本地存储
+            // let token = MY_GITHUB_TOKEN || localStorage.getItem(GITHUB_TOKEN_KEY);
+            // if (!token) {
+            //     document.getElementById("authOverlay").classList.remove("hidden");
+            //     return;
+            // }
+                        // 加载背景
             loadBgImage();
             
             // 加载记录
@@ -458,7 +470,7 @@
                 } else {
                     // 创建Gist
                     const res = await axios.post("https://api.github.com/gists", {
-                        description: "我的生活记录馆数据",
+                        description: "小屋一间 数据",
                         public: false,
                         files: {
                             "records.json": { content: JSON.stringify(data) }
@@ -672,7 +684,7 @@
             } else {
                 // 创建Gist
                 const res = await axios.post("https://api.github.com/gists", {
-                    description: "我的生活记录馆数据",
+                    description: "小屋一间 数据",
                     public: false,
                     files: {
                         "records.json": { content: JSON.stringify(data) }
@@ -811,6 +823,7 @@
     </script>
 </body>
 </html>
+
 
 
 
