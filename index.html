@@ -1,32 +1,817 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>我的碎碎念小站</title>
-<style>
-body{background:#f9f9f9;font-family:Arial;padding:20px;max-width:800px;margin:0 auto;}
-.card{background:white;padding:20px;margin:15px 0;border-radius:12px;box-shadow:0 2px 5px rgba(0,0,0,0.05);}
-img{max-width:100%;border-radius:8px;margin:10px 0;}
-video{max-width:100%;border-radius:8px;margin:10px 0;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的生活记录馆 📝</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        /* 基础样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", "PingFang SC", Arial, sans-serif;
+        }
+        body {
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+            transition: background 0.5s ease;
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+        }
+        /* 遮罩层（授权/加载） */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        /* 顶部导航 */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+        /* 背景设置区 */
+        .bg-settings {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .bg-settings h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .bg-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        #bgImageUpload {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .bg-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .bg-btn:hover {
+            transform: translateY(-2px);
+        }
+        /* 编辑区域 */
+        .edit-panel {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            margin-bottom: 40px;
+        }
+        .edit-panel h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-size: 14px;
+        }
+        #contentType {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        #contentInput {
+            width: 100%;
+            height: 120px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            resize: vertical;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        /* 多媒体上传 */
+        .media-upload {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .media-item {
+            flex: 1;
+            min-width: 200px;
+        }
+        #imageUpload, #videoUpload {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .preview-area {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px;
+            border: 1px dashed #ddd;
+            border-radius: 8px;
+        }
+        .preview-img {
+            width: 120px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+        .preview-video {
+            width: 200px;
+            height: 120px;
+            border-radius: 6px;
+        }
+        /* 提交/编辑按钮 */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        #submitBtn, #cancelEditBtn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s ease;
+        }
+        #cancelEditBtn {
+            background: #f44336;
+        }
+        #submitBtn:hover {
+            background: #45a049;
+        }
+        #cancelEditBtn:hover {
+            background: #d32f2f;
+        }
+        /* 内容展示区 */
+        .records-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .record-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+        }
+        .record-card:hover {
+            transform: translateY(-5px);
+        }
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .record-time {
+            color: #999;
+            font-size: 12px;
+        }
+        .record-type {
+            background: #e3f2fd;
+            color: #1976D2;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .record-content {
+            color: #333;
+            line-height: 1.8;
+            margin-bottom: 15px;
+            font-size: 15px;
+        }
+        .record-media {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .record-media img {
+            max-width: 200px;
+            max-height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .record-media video {
+            max-width: 300px;
+            max-height: 200px;
+            border-radius: 8px;
+        }
+        .record-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .edit-btn, .delete-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .edit-btn {
+            background: #2196F3;
+            color: white;
+        }
+        .delete-btn {
+            background: #f44336;
+            color: white;
+        }
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .media-upload {
+                flex-direction: column;
+            }
+            .record-media img {
+                max-width: 100%;
+            }
+            .record-media video {
+                max-width: 100%;
+            }
+            .btn-group {
+                flex-direction: column;
+            }
+        }
+    </style>
 </head>
-<body>
-<h1>我的碎碎念小站</h1>
+<body id="mainBody">
+    <!-- 授权遮罩层 -->
+    <div class="overlay" id="authOverlay">
+        <h2>首次使用请授权 GitHub Gist 存储</h2>
+        <p>1. 打开 <a href="https://github.com/settings/tokens/new" target="_blank" style="color: #4CAF50;">https://github.com/settings/tokens/new</a></p>
+        <p>2. 勾选权限：gist</p>
+        <p>3. 生成Token并粘贴到下方</p>
+        <input type="password" id="githubToken" placeholder="粘贴你的GitHub Token" style="padding: 10px; width: 300px; border-radius: 8px; border: none;">
+        <button class="bg-btn" onclick="saveToken()">确认授权</button>
+    </div>
 
-<div class="card">
-<h3>2026-02-26</h3>
-<p>今天我终于拥有自己的个人网站啦！免费的，超开心～</p>
-</div>
+    <!-- 加载遮罩层 -->
+    <div class="overlay hidden" id="loadingOverlay">
+        <h2>加载中...</h2>
+    </div>
 
-<div class="card">
-<h3>分享一张图片</h3>
-<img src="https://picsum.photos/600/400">
-</div>
+    <!-- 顶部标题 -->
+    <div class="header">
+        <h1>我的生活记录馆 📝</h1>
+        <p>记录思考、日常、待办、书单... 每一刻都值得珍藏</p>
+    </div>
 
-<div class="card">
-<h3>分享一个视频</h3>
-<video controls src="https://www.w3school.com.cn/i/movie.mp4"></video>
-</div>
+    <!-- 背景设置区 -->
+    <div class="bg-settings">
+        <h3>🎨 自定义背景</h3>
+        <div class="bg-controls">
+            <input type="file" id="bgImageUpload" accept="image/*" onchange="previewBgImage(event)">
+            <button class="bg-btn" onclick="saveBgImage()">保存背景</button>
+            <button class="bg-btn" onclick="resetBg()">重置背景</button>
+        </div>
+    </div>
+
+    <!-- 编辑面板 -->
+    <div class="edit-panel">
+        <h3 id="editTitle">✍️ 新增记录</h3>
+        <div class="input-group">
+            <label for="contentType">记录类型</label>
+            <select id="contentType">
+                <option value="日常思考">日常思考</option>
+                <option value="今日完成">今日完成</option>
+                <option value="待办清单">待办清单</option>
+                <option value="书籍清单">书籍清单</option>
+                <option value="随手记">随手记</option>
+                <option value="其他">其他</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="contentInput">记录内容</label>
+            <textarea id="contentInput" placeholder="写下你的想法、做过的事、待办的清单...
+比如：
+1. 今天读完了《小王子》，很有感触
+2. 待办：明天去超市买牛奶、水果
+3. 思考：人为什么要坚持做一件事？"></textarea>
+        </div>
+        <!-- 多媒体上传 -->
+        <div class="media-upload">
+            <div class="media-item">
+                <label for="imageUpload">添加图片</label>
+                <input type="file" id="imageUpload" accept="image/*" onchange="previewMedia('image')">
+            </div>
+            <div class="media-item">
+                <label for="videoUpload">添加视频</label>
+                <input type="file" id="videoUpload" accept="video/*" onchange="previewMedia('video')">
+            </div>
+        </div>
+        <!-- 预览区域 -->
+        <div class="preview-area" id="previewArea"></div>
+        <!-- 按钮组 -->
+        <div class="btn-group">
+            <button id="submitBtn" onclick="saveRecord()">保存记录</button>
+            <button id="cancelEditBtn" class="hidden" onclick="cancelEdit()">取消编辑</button>
+        </div>
+    </div>
+
+    <!-- 记录展示区 -->
+    <div class="records-list" id="recordsList"></div>
+
+    <script>
+        // 全局配置
+        const GIST_ID_KEY = "myLifeRecordsGistId";
+        const GITHUB_TOKEN_KEY = "githubToken";
+        const BG_IMAGE_KEY = "bgImageUrl";
+        let currentEditId = null;
+        let previewFiles = { image: null, video: null };
+        let bgImageFile = null;
+
+        // 1. 页面加载初始化
+        window.onload = async function() {
+            // 检查GitHub Token
+            const token = localStorage.getItem(GITHUB_TOKEN_KEY);
+            if (!token) {
+                document.getElementById("authOverlay").classList.remove("hidden");
+                return;
+            }
+            
+            // 加载背景
+            loadBgImage();
+            
+            // 加载记录
+            await loadRecords();
+        };
+
+        // 2. GitHub Token授权
+        function saveToken() {
+            const token = document.getElementById("githubToken").value.trim();
+            if (!token) {
+                alert("请输入有效的GitHub Token！");
+                return;
+            }
+            localStorage.setItem(GITHUB_TOKEN_KEY, token);
+            document.getElementById("authOverlay").classList.add("hidden");
+            loadRecords();
+            alert("授权成功！");
+        }
+
+        // 3. 背景图片处理
+        function previewBgImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            bgImageFile = file;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById("mainBody").style.backgroundImage = `url(${e.target.result})`;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function saveBgImage() {
+            if (!bgImageFile) {
+                alert("请先选择背景图片！");
+                return;
+            }
+            
+            // 上传图片到GitHub Gist（简化版：转Base64存储）
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const bgImageUrl = e.target.result;
+                // 保存到Gist
+                const token = localStorage.getItem(GITHUB_TOKEN_KEY);
+                let gistId = localStorage.getItem(GIST_ID_KEY);
+                
+                // 读取现有数据
+                let records = [];
+                if (gistId) {
+                    try {
+                        const res = await axios.get(`https://api.github.com/gists/${gistId}`, {
+                            headers: { Authorization: `token ${token}` }
+                        });
+                        const content = JSON.parse(res.data.files["records.json"].content);
+                        records = content.records || [];
+                    } catch (e) {
+                        console.error("读取Gist失败", e);
+                    }
+                }
+                
+                // 保存背景+记录
+                const data = {
+                    bgImageUrl: bgImageUrl,
+                    records: records
+                };
+                
+                if (gistId) {
+                    // 更新Gist
+                    await axios.patch(`https://api.github.com/gists/${gistId}`, {
+                        files: {
+                            "records.json": { content: JSON.stringify(data) }
+                        }
+                    }, { headers: { Authorization: `token ${token}` } });
+                } else {
+                    // 创建Gist
+                    const res = await axios.post("https://api.github.com/gists", {
+                        description: "我的生活记录馆数据",
+                        public: false,
+                        files: {
+                            "records.json": { content: JSON.stringify(data) }
+                        }
+                    }, { headers: { Authorization: `token ${token}` } });
+                    localStorage.setItem(GIST_ID_KEY, res.data.id);
+                }
+                
+                alert("背景保存成功！");
+            };
+            reader.readAsDataURL(bgImageFile);
+        }
+
+        function loadBgImage() {
+            const token = localStorage.getItem(GITHUB_TOKEN_KEY);
+            const gistId = localStorage.getItem(GIST_ID_KEY);
+            if (!token || !gistId) return;
+            
+            axios.get(`https://api.github.com/gists/${gistId}`, {
+                headers: { Authorization: `token ${token}` }
+            }).then(res => {
+                const content = JSON.parse(res.data.files["records.json"].content);
+                if (content.bgImageUrl) {
+                    document.getElementById("mainBody").style.backgroundImage = `url(${content.bgImageUrl})`;
+                    localStorage.setItem(BG_IMAGE_KEY, content.bgImageUrl);
+                }
+            }).catch(e => {
+                console.error("加载背景失败", e);
+            });
+        }
+
+        function resetBg() {
+            document.getElementById("mainBody").style.backgroundImage = "none";
+            document.getElementById("mainBody").style.backgroundColor = "#f9f9f9";
+            
+            // 清空Gist中的背景
+            const token = localStorage.getItem(GITHUB_TOKEN_KEY);
+            const gistId = localStorage.getItem(GIST_ID_KEY);
+            if (token && gistId) {
+                axios.get(`https://api.github.com/gists/${gistId}`, {
+                    headers: { Authorization: `token ${token}` }
+                }).then(res => {
+                    const content = JSON.parse(res.data.files["records.json"].content);
+                    content.bgImageUrl = "";
+                    return axios.patch(`https://api.github.com/gists/${gistId}`, {
+                        files: {
+                            "records.json": { content: JSON.stringify(content) }
+                        }
+                    }, { headers: { Authorization: `token ${token}` } });
+                }).then(() => {
+                    alert("背景已重置！");
+                }).catch(e => {
+                    console.error("重置背景失败", e);
+                });
+            }
+        }
+
+        // 4. 媒体预览
+        function previewMedia(type) {
+            const fileInput = document.getElementById(`${type}Upload`);
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            previewFiles[type] = file;
+            const previewArea = document.getElementById("previewArea");
+            previewArea.innerHTML = "";
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (type === "image") {
+                    const img = document.createElement("img");
+                    img.src = e.target.result;
+                    img.className = "preview-img";
+                    previewArea.appendChild(img);
+                } else if (type === "video") {
+                    const video = document.createElement("video");
+                    video.src = e.target.result;
+                    video.className = "preview-video";
+                    video.controls = true;
+                    previewArea.appendChild(video);
+                }
+            };
+            
+            if (type === "image") {
+                reader.readAsDataURL(file);
+            } else if (type === "video") {
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // 5. 记录管理
+        async function loadRecords() {
+            showLoading(true);
+            const token = localStorage.getItem(GITHUB_TOKEN_KEY);
+            const gistId = localStorage.getItem(GIST_ID_KEY);
+            
+            let records = [];
+            if (token && gistId) {
+                try {
+                    const res = await axios.get(`https://api.github.com/gists/${gistId}`, {
+                        headers: { Authorization: `token ${token}` }
+                    });
+                    const content = JSON.parse(res.data.files["records.json"].content);
+                    records = content.records || [];
+                } catch (e) {
+                    console.error("加载记录失败", e);
+                    alert("加载记录失败，请检查Token是否有效！");
+                }
+            }
+            
+            // 按时间倒序排序
+            records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            // 渲染记录
+            const recordsList = document.getElementById("recordsList");
+            recordsList.innerHTML = "";
+            
+            records.forEach(record => {
+                const card = document.createElement("div");
+                card.className = "record-card";
+                card.innerHTML = `
+                    <div class="record-header">
+                        <span class="record-time">${formatTime(record.timestamp)}</span>
+                        <span class="record-type">${record.type}</span>
+                    </div>
+                    <div class="record-content">${record.content.replace(/\n/g, "<br>")}</div>
+                    <div class="record-media">
+                        ${record.imageUrl ? `<img src="${record.imageUrl}" alt="记录图片">` : ""}
+                        ${record.videoUrl ? `<video controls src="${record.videoUrl}"></video>` : ""}
+                    </div>
+                    <div class="record-actions">
+                        <button class="edit-btn" onclick="editRecord('${record.id}')">编辑</button>
+                        <button class="delete-btn" onclick="deleteRecord('${record.id}')">删除</button>
+                    </div>
+                `;
+                recordsList.appendChild(card);
+            });
+            
+            showLoading(false);
+        }
+
+        async function saveRecord() {
+            const type = document.getElementById("contentType").value;
+            const content = document.getElementById("contentInput").value.trim();
+            if (!content) {
+                alert("请输入记录内容！");
+                return;
+            }
+            
+            showLoading(true);
+            const token = localStorage.getItem(GITHUB_TOKEN_KEY);
+            let gistId = localStorage.getItem(GIST_ID_KEY);
+            
+            // 处理媒体文件（转Base64）
+            let imageUrl = "";
+            let videoUrl = "";
+            
+            if (previewFiles.image) {
+                imageUrl = await fileToBase64(previewFiles.image);
+            }
+            if (previewFiles.video) {
+                videoUrl = await fileToBase64(previewFiles.video);
+            }
+            
+            // 构建记录
+            const record = {
+                id: currentEditId || generateId(),
+                type: type,
+                content: content,
+                timestamp: new Date().toISOString(),
+                imageUrl: imageUrl,
+                videoUrl: videoUrl
+            };
+            
+            // 读取现有记录
+            let records = [];
+            let bgImageUrl = "";
+            if (gistId) {
+                try {
+                    const res = await axios.get(`https://api.github.com/gists/${gistId}`, {
+                        headers: { Authorization: `token ${token}` }
+                    });
+                    const content = JSON.parse(res.data.files["records.json"].content);
+                    records = content.records || [];
+                    bgImageUrl = content.bgImageUrl || "";
+                } catch (e) {
+                    console.error("读取记录失败", e);
+                }
+            }
+            
+            // 编辑/新增
+            if (currentEditId) {
+                records = records.map(r => r.id === currentEditId ? record : r);
+            } else {
+                records.push(record);
+            }
+            
+            // 保存到Gist
+            const data = {
+                bgImageUrl: bgImageUrl,
+                records: records
+            };
+            
+            if (gistId) {
+                // 更新Gist
+                await axios.patch(`https://api.github.com/gists/${gistId}`, {
+                    files: {
+                        "records.json": { content: JSON.stringify(data) }
+                    }
+                }, { headers: { Authorization: `token ${token}` } });
+            } else {
+                // 创建Gist
+                const res = await axios.post("https://api.github.com/gists", {
+                    description: "我的生活记录馆数据",
+                    public: false,
+                    files: {
+                        "records.json": { content: JSON.stringify(data) }
+                    }
+                }, { headers: { Authorization: `token ${token}` } });
+                localStorage.setItem(GIST_ID_KEY, res.data.id);
+            }
+            
+            // 重置状态
+            resetEditState();
+            await loadRecords();
+            showLoading(false);
+            alert(currentEditId ? "记录编辑成功！" : "记录保存成功！");
+        }
+
+        function editRecord(id) {
+            const token = localStorage.getItem(GITHUB_TOKEN_KEY);
+            const gistId = localStorage.getItem(GIST_ID_KEY);
+            
+            axios.get(`https://api.github.com/gists/${gistId}`, {
+                headers: { Authorization: `token ${token}` }
+            }).then(res => {
+                const content = JSON.parse(res.data.files["records.json"].content);
+                const record = content.records.find(r => r.id === id);
+                if (!record) return;
+                
+                // 填充表单
+                document.getElementById("contentType").value = record.type;
+                document.getElementById("contentInput").value = record.content;
+                currentEditId = id;
+                
+                // 预览媒体
+                const previewArea = document.getElementById("previewArea");
+                previewArea.innerHTML = "";
+                if (record.imageUrl) {
+                    const img = document.createElement("img");
+                    img.src = record.imageUrl;
+                    img.className = "preview-img";
+                    previewArea.appendChild(img);
+                    previewFiles.image = record.imageUrl;
+                }
+                if (record.videoUrl) {
+                    const video = document.createElement("video");
+                    video.src = record.videoUrl;
+                    video.className = "preview-video";
+                    video.controls = true;
+                    previewArea.appendChild(video);
+                    previewFiles.video = record.videoUrl;
+                }
+                
+                // 切换按钮状态
+                document.getElementById("editTitle").textContent = "✏️ 编辑记录";
+                document.getElementById("cancelEditBtn").classList.remove("hidden");
+            });
+        }
+
+        async function deleteRecord(id) {
+            if (!confirm("确定要删除这条记录吗？")) return;
+            
+            showLoading(true);
+            const token = localStorage.getItem(GITHUB_TOKEN_KEY);
+            const gistId = localStorage.getItem(GIST_ID_KEY);
+            
+            // 读取现有记录
+            const res = await axios.get(`https://api.github.com/gists/${gistId}`, {
+                headers: { Authorization: `token ${token}` }
+            });
+            const content = JSON.parse(res.data.files["records.json"].content);
+            let records = content.records || [];
+            const bgImageUrl = content.bgImageUrl || "";
+            
+            // 删除记录
+            records = records.filter(r => r.id !== id);
+            
+            // 保存到Gist
+            await axios.patch(`https://api.github.com/gists/${gistId}`, {
+                files: {
+                    "records.json": { content: JSON.stringify({ bgImageUrl, records }) }
+                }
+            }, { headers: { Authorization: `token ${token}` } });
+            
+            await loadRecords();
+            showLoading(false);
+            alert("记录删除成功！");
+        }
+
+        function cancelEdit() {
+            resetEditState();
+        }
+
+        function resetEditState() {
+            document.getElementById("contentType").value = "日常思考";
+            document.getElementById("contentInput").value = "";
+            document.getElementById("previewArea").innerHTML = "";
+            document.getElementById("editTitle").textContent = "✍️ 新增记录";
+            document.getElementById("cancelEditBtn").classList.add("hidden");
+            currentEditId = null;
+            previewFiles = { image: null, video: null };
+            bgImageFile = null;
+        }
+
+        // 6. 工具函数
+        function generateId() {
+            return Date.now() + "-" + Math.random().toString(36).substr(2, 9);
+        }
+
+        function formatTime(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleString("zh-CN", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit"
+            });
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = e => reject(e);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function showLoading(show) {
+            const overlay = document.getElementById("loadingOverlay");
+            if (show) {
+                overlay.classList.remove("hidden");
+            } else {
+                overlay.classList.add("hidden");
+            }
+        }
+    </script>
 </body>
 </html>
