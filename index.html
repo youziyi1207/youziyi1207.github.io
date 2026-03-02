@@ -394,15 +394,42 @@
         let previewFiles = { image: null, video: null };
         let bgImageFile = null;
 
-
-        // 页面加载初始化（仅首次授权，授权后永久隐藏弹框，修复重复输Token问题）
+        // 页面加载初始化（终极修复：Token读取+备份+有效期验证，彻底解决重复输Token）
         window.onload = async function() {
-            // 先读取本地Token，再设置Gist ID（避免干扰Token读取）
-            let token = localStorage.getItem(GITHUB_TOKEN_KEY);
+            // 先读取本地Token（带有效期），再设置Gist ID（避免干扰）
+            let token = null;
+            const savedTokenData = localStorage.getItem(GITHUB_TOKEN_KEY);
+            
+            // 关键修改1：验证Token是否存在、是否过期
+            if (savedTokenData) {
+                const tokenObj = JSON.parse(savedTokenData);
+                // 检查有效期（没过期就用，过期了提示重新授权）
+                if (new Date().getTime() < tokenObj.expireTime) {
+                    token = tokenObj.value;
+                } else {
+                    alert("Token已过期（1年有效期），请重新授权1次～");
+                    localStorage.removeItem(GITHUB_TOKEN_KEY); // 删除过期Token
+                }
+            }
+            
+            // 关键修改2：如果localStorage没读到Token，读取sessionStorage备份
+            if (!token) {
+                const backupToken = sessionStorage.getItem(GITHUB_TOKEN_KEY + "_backup");
+                if (backupToken) {
+                    token = backupToken;
+                    // 同时重新保存到localStorage，延长有效期
+                    const newTokenData = {
+                        value: backupToken,
+                        expireTime: new Date().getTime() + 365 * 24 * 60 * 60 * 1000
+                    };
+                    localStorage.setItem(GITHUB_TOKEN_KEY, JSON.stringify(newTokenData));
+                }
+            }
+            
             // 强制设置固定Gist ID（所有设备共用，无敏感信息）
             localStorage.setItem(GIST_ID_KEY, FIXED_GIST_ID);
             
-            // 检查本地是否有Token（有则直接加载，无则显示授权框）
+            // 检查是否有可用Token（有则加载数据，无则显示授权框）
             if (!token) {
                 document.getElementById("authOverlay").classList.remove("hidden");
                 return;
@@ -417,7 +444,7 @@
             }
         };
 
-        // Token授权（仅首次执行，Token仅保存在本地，不写入代码）
+        // Token授权（仅首次执行，添加保存验证+有效期，确保Token不会丢失）
         function saveToken() {
             const token = document.getElementById("githubToken").value.trim();
             if (!token) {
@@ -425,15 +452,29 @@
                 return;
             }
             
-            // 仅保存到本地存储，不写入任何代码（彻底规避Secret扫描）
-            localStorage.setItem(GITHUB_TOKEN_KEY, token);
-            document.getElementById("authOverlay").classList.add("hidden");
+            // 关键修改1：添加Token有效期（设置为1年，1年后才需要重新授权，足够用）
+            const tokenData = {
+                value: token,
+                expireTime: new Date().getTime() + 365 * 24 * 60 * 60 * 1000 // 1年有效期（毫秒）
+            };
             
-            // 初始化数据
+            // 关键修改2：保存Token（同时存到localStorage和sessionStorage，双重备份，防止丢失）
+            localStorage.setItem(GITHUB_TOKEN_KEY, JSON.stringify(tokenData));
+            sessionStorage.setItem(GITHUB_TOKEN_KEY + "_backup", token);
+            
+            // 关键修改3：验证Token是否保存成功
+            const savedTokenData = localStorage.getItem(GITHUB_TOKEN_KEY);
+            if (!savedTokenData) {
+                // 若localStorage保存失败，用sessionStorage备份，至少保证当前会话不用重复输
+                alert("本地存储受限，已用临时备份保存Token，当前会话无需重复授权～");
+            } else {
+                alert("授权成功！从此该设备无需重复授权（1年内有效）～");
+            }
+            
+            // 隐藏授权框，初始化数据
+            document.getElementById("authOverlay").classList.add("hidden");
             loadBgImage(token);
             loadRecords(token);
-            
-            alert("授权成功！从此该设备无需重复授权～");
         }
 
         // 背景图片处理 - 云端同步版
@@ -580,7 +621,7 @@
             reader.readAsDataURL(file);
         }
 
-        // 记录管理 - 云端同步核心版
+        // 记录管理 - 云端同步核心版（新增自动渲染，无需刷新）
         async function loadRecords(token) {
             showLoading(true);
             const gistId = FIXED_GIST_ID;
@@ -627,6 +668,7 @@
             
             showLoading(false);
         }
+
         async function saveRecord() {
             const type = document.getElementById("contentType").value;
             const content = document.getElementById("contentInput").value.trim();
@@ -702,7 +744,7 @@
             
             // 重置状态
             resetEditState();
-            // 重新加载记录（同步最新数据）- 原代码已有
+            // 重新加载记录（同步最新数据）
             await loadRecords(token);
             showLoading(false);
             
@@ -711,7 +753,6 @@
             
             alert(currentEditId ? "记录编辑成功！所有设备已同步～" : "记录保存成功！所有设备已同步～");
         }
-        
 
         function editRecord(id) {
             const token = localStorage.getItem(GITHUB_TOKEN_KEY);
@@ -817,7 +858,7 @@
             document.getElementById("contentType").value = "日常思考";
             document.getElementById("contentInput").value = "";
             document.getElementById("previewArea").innerHTML = "";
-            document.getElementById("editTitle").textContent = "✏️ 小屋记事";
+            document.getElementById("editTitle").textContent = "✍️ 小屋记事";
             document.getElementById("cancelEditBtn").classList.add("hidden");
             currentEditId = null;
             previewFiles = { image: null, video: null };
@@ -858,6 +899,7 @@
                 overlay.classList.add("hidden");
             }
         }
+
         // 新增：手动渲染单条记录（保存后实时显示，无需刷新）
         function renderSingleRecord(record) {
             const recordsList = document.getElementById("recordsList");
@@ -882,7 +924,29 @@
             // 将新卡片插入到列表最顶部（实时显示最新记录）
             recordsList.insertBefore(card, recordsList.firstChild);
         }
+
+        // 新增：Token手动备份功能（极端情况备用，可选使用）
+        function backupToken() {
+            const savedTokenData = localStorage.getItem(GITHUB_TOKEN_KEY);
+            if (savedTokenData) {
+                const tokenObj = JSON.parse(savedTokenData);
+                // 弹出Token，提示用户手动备份（复制保存，极端情况可重新粘贴）
+                alert(`请复制此Token备份（极端情况使用）：\n${tokenObj.value}\n\n备份后，即使本地存储被清理，也可重新粘贴授权`);
+            } else {
+                alert("请先完成授权，再进行Token备份～");
+            }
+        }
+
+        // 新增：页面加载后，自动提示一次备份（仅一次，不打扰使用）
+        window.addEventListener("load", function() {
+            const savedTokenData = localStorage.getItem(GITHUB_TOKEN_KEY);
+            if (savedTokenData && !localStorage.getItem("backupHintShown")) {
+                setTimeout(() => {
+                    alert("授权成功！为防止Token丢失，可点击浏览器F12→Application→LocalStorage，找到githubToken备份，或后续需要时，联系我获取手动备份方法～");
+                    localStorage.setItem("backupHintShown", "true"); // 仅提示一次
+                }, 3000);
+            }
+        });
     </script>
 </body>
 </html>
-
