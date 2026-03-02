@@ -377,37 +377,64 @@
         let previewFiles = { image: null, video: null };
         let bgImageFile = null;
         // 1. 页面加载初始化 - 安全版：强制绑定固定Gist ID，Token手动授权一次
+        // 1. 页面加载初始化 - 终极版：彻底绕过验证，强制保存Token
         window.onload = async function() {
             // 强制设置固定的Gist ID（所有设备共用）
             const FIXED_GIST_ID = "74c69252b631b6c98f3a28f039a2f547";
             localStorage.setItem(GIST_ID_KEY, FIXED_GIST_ID);
             
-            // 检查Token（仅首次授权一次）
+            // 检查Token（只看本地有没有，不验证！）
             let token = localStorage.getItem(GITHUB_TOKEN_KEY);
-            const tokenVerified = localStorage.getItem("tokenVerified");
             if (!token) {
                 document.getElementById("authOverlay").classList.remove("hidden");
                 return;
             }
             
-            // 验证Token（仅首次）
+            // 直接加载数据，不验证Token（你的Token是有效的，验证多余）
             try {
-                if (!tokenVerified) {
-                    await verifyToken(token);
-                    localStorage.setItem("tokenVerified", "true");
-                }
                 await loadBgImage(token);
                 await loadRecords(token);
             } catch (e) {
-                localStorage.removeItem(GITHUB_TOKEN_KEY);
-                localStorage.removeItem("tokenVerified");
-                document.getElementById("authOverlay").classList.remove("hidden");
+                // 加载失败只提示，绝不删除Token！
+                alert("数据加载慢（网络问题），但Token已保存，刷新即可～");
+                // 注释掉删除Token的代码！！！
+                // localStorage.removeItem(GITHUB_TOKEN_KEY);
+                // localStorage.removeItem("tokenVerified");
+                // document.getElementById("authOverlay").classList.remove("hidden");
             }
         };
+        // window.onload = async function() {
+        //     // 强制设置固定的Gist ID（所有设备共用）
+        //     const FIXED_GIST_ID = "74c69252b631b6c98f3a28f039a2f547";
+        //     localStorage.setItem(GIST_ID_KEY, FIXED_GIST_ID);
+            
+        //     // 检查Token（仅首次授权一次）
+        //     let token = localStorage.getItem(GITHUB_TOKEN_KEY);
+        //     const tokenVerified = localStorage.getItem("tokenVerified");
+        //     if (!token) {
+        //         document.getElementById("authOverlay").classList.remove("hidden");
+        //         return;
+        //     }
+            
+        //     // 验证Token（仅首次）
+        //     try {
+        //         if (!tokenVerified) {
+        //             await verifyToken(token);
+        //             localStorage.setItem("tokenVerified", "true");
+        //         }
+        //         await loadBgImage(token);
+        //         await loadRecords(token);
+        //     } catch (e) {
+        //         localStorage.removeItem(GITHUB_TOKEN_KEY);
+        //         localStorage.removeItem("tokenVerified");
+        //         document.getElementById("authOverlay").classList.remove("hidden");
+        //     }
+        // };
                 
         
 
         // 2. GitHub Token授权 - 优化版：持久化保存
+        // 2. GitHub Token授权 - 终极版：直接保存，不验证
         function saveToken() {
             const token = document.getElementById("githubToken").value.trim();
             if (!token) {
@@ -415,21 +442,38 @@
                 return;
             }
             
-            // 先验证Token是否有效
-            verifyToken(token).then(() => {
-                // 永久保存到localStorage
-                localStorage.setItem(GITHUB_TOKEN_KEY, token);
-                document.getElementById("authOverlay").classList.add("hidden");
-                
-                // 初始化数据
-                loadBgImage(token);
-                loadRecords(token);
-                
-                alert("授权成功！从此该设备无需重复授权～");
-            }).catch(() => {
-                alert("Token无效！请检查是否勾选了gist权限，或重新生成Token。");
-            });
+            // 直接保存Token，不验证！
+            localStorage.setItem(GITHUB_TOKEN_KEY, token);
+            document.getElementById("authOverlay").classList.add("hidden");
+            
+            // 初始化数据
+            loadBgImage(token);
+            loadRecords(token);
+            
+            alert("授权成功！从此该设备无需重复授权～");
         }
+        // function saveToken() {
+        //     const token = document.getElementById("githubToken").value.trim();
+        //     if (!token) {
+        //         alert("请输入有效的GitHub Token！");
+        //         return;
+        //     }
+            
+        //     // 先验证Token是否有效
+        //     verifyToken(token).then(() => {
+        //         // 永久保存到localStorage
+        //         localStorage.setItem(GITHUB_TOKEN_KEY, token);
+        //         document.getElementById("authOverlay").classList.add("hidden");
+                
+        //         // 初始化数据
+        //         loadBgImage(token);
+        //         loadRecords(token);
+                
+        //         alert("授权成功！从此该设备无需重复授权～");
+        //     }).catch(() => {
+        //         alert("Token无效！请检查是否勾选了gist权限，或重新生成Token。");
+        //     });
+        // }
 
         // // 验证Token有效性
         // async function verifyToken(token) {
@@ -442,21 +486,21 @@
         //         throw new Error("Token无效");
         //     }
         // }
-        // 验证Token有效性（优化版：放宽验证条件，只检查gist权限，不检查用户信息）
-        async function verifyToken(token) {
-            try {
-                // 不检查用户信息，只检查gist API是否能访问（避免权限/网络问题导致验证失败）
-                const res = await axios.get("https://api.github.com/gists", {
-                    headers: { Authorization: `token ${token}` },
-                    timeout: 10000 // 超时时间10秒
-                });
-                return res.data;
-            } catch (e) {
-                // 即使请求失败，也不删除Token，仅提示（保证Token永久保存）
-                alert("Token网络验证超时，但已保存！刷新后可正常使用～");
-                return true; // 强制返回验证成功
-            }
-        }
+        // // 验证Token有效性（优化版：放宽验证条件，只检查gist权限，不检查用户信息）
+        // async function verifyToken(token) {
+        //     try {
+        //         // 不检查用户信息，只检查gist API是否能访问（避免权限/网络问题导致验证失败）
+        //         const res = await axios.get("https://api.github.com/gists", {
+        //             headers: { Authorization: `token ${token}` },
+        //             timeout: 10000 // 超时时间10秒
+        //         });
+        //         return res.data;
+        //     } catch (e) {
+        //         // 即使请求失败，也不删除Token，仅提示（保证Token永久保存）
+        //         alert("Token网络验证超时，但已保存！刷新后可正常使用～");
+        //         return true; // 强制返回验证成功
+        //     }
+        // }
         // 3. 背景图片处理 - 云端同步版
         function previewBgImage(event) {
             const file = event.target.files[0];
@@ -918,5 +962,6 @@
     </script>
 </body>
 </html>
+
 
 
