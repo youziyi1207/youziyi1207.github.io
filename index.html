@@ -376,29 +376,36 @@
         let currentEditId = null;
         let previewFiles = { image: null, video: null };
         let bgImageFile = null;
-
-        // 1. 页面加载初始化 - 优化版：确保Token持久化
+        // 1. 页面加载初始化 - 安全版：强制绑定固定Gist ID，Token手动授权一次
         window.onload = async function() {
-            // 检查GitHub Token
+            // 强制设置固定的Gist ID（所有设备共用）
+            const FIXED_GIST_ID = "74c69252b631b6c98f3a28f039a2f547";
+            localStorage.setItem(GIST_ID_KEY, FIXED_GIST_ID);
+            
+            // 检查Token（仅首次授权一次）
             let token = localStorage.getItem(GITHUB_TOKEN_KEY);
+            const tokenVerified = localStorage.getItem("tokenVerified");
             if (!token) {
                 document.getElementById("authOverlay").classList.remove("hidden");
                 return;
             }
             
-            // 验证Token有效性 + 加载数据
+            // 验证Token（仅首次）
             try {
-                await verifyToken(token);
-                // 加载背景
+                if (!tokenVerified) {
+                    await verifyToken(token);
+                    localStorage.setItem("tokenVerified", "true");
+                }
                 await loadBgImage(token);
-                // 加载记录
                 await loadRecords(token);
             } catch (e) {
-                // Token失效，重新授权
                 localStorage.removeItem(GITHUB_TOKEN_KEY);
+                localStorage.removeItem("tokenVerified");
                 document.getElementById("authOverlay").classList.remove("hidden");
             }
         };
+                
+        
 
         // 2. GitHub Token授权 - 优化版：持久化保存
         function saveToken() {
@@ -897,3 +904,4 @@
     </script>
 </body>
 </html>
+
