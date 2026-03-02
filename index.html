@@ -394,13 +394,15 @@
         let previewFiles = { image: null, video: null };
         let bgImageFile = null;
 
-        // 页面加载初始化（仅首次授权，授权后永久隐藏弹框）
+
+        // 页面加载初始化（仅首次授权，授权后永久隐藏弹框，修复重复输Token问题）
         window.onload = async function() {
+            // 先读取本地Token，再设置Gist ID（避免干扰Token读取）
+            let token = localStorage.getItem(GITHUB_TOKEN_KEY);
             // 强制设置固定Gist ID（所有设备共用，无敏感信息）
             localStorage.setItem(GIST_ID_KEY, FIXED_GIST_ID);
             
             // 检查本地是否有Token（有则直接加载，无则显示授权框）
-            let token = localStorage.getItem(GITHUB_TOKEN_KEY);
             if (!token) {
                 document.getElementById("authOverlay").classList.remove("hidden");
                 return;
@@ -625,7 +627,6 @@
             
             showLoading(false);
         }
-
         async function saveRecord() {
             const type = document.getElementById("contentType").value;
             const content = document.getElementById("contentInput").value.trim();
@@ -701,12 +702,16 @@
             
             // 重置状态
             resetEditState();
-            // 重新加载记录（同步最新数据）
+            // 重新加载记录（同步最新数据）- 原代码已有
             await loadRecords(token);
             showLoading(false);
             
+            // 新增：手动渲染最新记录（无需刷新，保存后立即显示）
+            renderSingleRecord(record);
+            
             alert(currentEditId ? "记录编辑成功！所有设备已同步～" : "记录保存成功！所有设备已同步～");
         }
+        
 
         function editRecord(id) {
             const token = localStorage.getItem(GITHUB_TOKEN_KEY);
@@ -853,6 +858,31 @@
                 overlay.classList.add("hidden");
             }
         }
+        // 新增：手动渲染单条记录（保存后实时显示，无需刷新）
+        function renderSingleRecord(record) {
+            const recordsList = document.getElementById("recordsList");
+            // 创建新记录卡片
+            const card = document.createElement("div");
+            card.className = "record-card";
+            card.innerHTML = `
+                <div class="record-header">
+                    <span class="record-time">${formatTime(record.timestamp)}</span>
+                    <span class="record-type">${record.type}</span>
+                </div>
+                <div class="record-content">${record.content.replace(/\n/g, "<br>")}</div>
+                <div class="record-media">
+                    ${record.imageUrl ? `<img src="${record.imageUrl}" alt="记录图片">` : ""}
+                    ${record.videoUrl ? `<video controls src="${record.videoUrl}"></video>` : ""}
+                </div>
+                <div class="record-actions">
+                    <button class="edit-btn" onclick="editRecord('${record.id}')">编辑</button>
+                    <button class="delete-btn" onclick="deleteRecord('${record.id}')">删除</button>
+                </div>
+            `;
+            // 将新卡片插入到列表最顶部（实时显示最新记录）
+            recordsList.insertBefore(card, recordsList.firstChild);
+        }
     </script>
 </body>
 </html>
+
