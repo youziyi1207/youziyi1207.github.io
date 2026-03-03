@@ -41,7 +41,7 @@
             padding: 20px;
         }
         .hidden {
-            display: none;
+            display: none !important;
         }
         /* 顶部导航 */
         .header {
@@ -290,7 +290,7 @@
                 flex-direction: column;
             }
         }
-        /* 授权弹框优化（仅首次显示，授权后永久隐藏） */
+        /* 授权弹框优化 */
         #authOverlay {
             background: rgba(0,0,0,0.8);
         }
@@ -310,14 +310,14 @@
     </style>
 </head>
 <body id="mainBody">
-    <!-- 授权遮罩层（仅首次显示，授权后永久隐藏，无明文Token） -->
+    <!-- 授权遮罩层 -->
     <div class="overlay" id="authOverlay">
-        <h2>首次使用请授权（仅需1次）</h2>
+        <h2>首次使用请授权</h2>
         <p>1. 打开 <a href="https://github.com/settings/tokens/new" target="_blank" style="color: #4CAF50;">https://github.com/settings/tokens/new</a></p>
         <p>2. 勾选权限：gist（仅需勾选这一项）</p>
-        <p>3. 生成Token并粘贴到下方（仅本地保存，不写入代码）</p>
+        <p>3. 生成Token并粘贴到下方</p>
         <input type="password" id="githubToken" placeholder="粘贴你的GitHub Token">
-        <button class="bg-btn" onclick="saveToken()">确认授权（仅1次）</button>
+        <button class="bg-btn" onclick="saveToken()">确认授权</button>
     </div>
 
     <!-- 加载遮罩层 -->
@@ -383,75 +383,78 @@
     <div class="records-list" id="recordsList"></div>
 
     <script>
-        // 全局配置（无明文Token，彻底规避Secret扫描）
+        // 全局配置
         const GIST_ID_KEY = "myLifeRecordsGistId";
         const GITHUB_TOKEN_KEY = "githubToken";
-        // 分段拼接+ASCII编码，避开GitHub扫描（核心修改）
-        const TOKEN_PART1 = String.fromCharCode(103,104,112,95); // "ghp_"的ASCII码
-        const TOKEN_PART2 = "1kioZhHQ5ICntZh0NM303vdUrMoTUK2l8Cpj";
-        const FIXED_TOKEN = (TOKEN_PART1 + TOKEN_PART2).split("").reverse().join("");
         const BG_IMAGE_KEY = "bgImageUrl";
-        // 固定Gist ID（无敏感信息，可公开）
+        
+        // 固定Gist ID
         const FIXED_GIST_ID = "74c69252b631b6c98f3a28f039a2f547";
         
         let currentEditId = null;
         let previewFiles = { image: null, video: null };
         let bgImageFile = null;
 
-        // 页面加载初始化（终极修复：Token读取+备份+有效期验证，彻底解决重复输Token）
+        // 页面加载初始化
         window.onload = async function() {
-            // 先读取本地Token（带有效期），再设置Gist ID（避免干扰）
-            // 直接用固定Token（解密），不再依赖本地存储，永远不用手动输入
-            let token = FIXED_TOKEN.split("").reverse().join(""); // 解密Token
+            // 检查是否已有Token
+            const tokenData = localStorage.getItem(GITHUB_TOKEN_KEY);
             
-            // 强制设置固定Gist ID（所有设备共用，无敏感信息）
+            if (tokenData) {
+                try {
+                    const tokenObj = JSON.parse(tokenData);
+                    // 检查Token是否过期
+                    if (tokenObj.expireTime && tokenObj.expireTime > new Date().getTime()) {
+                        // Token有效，隐藏授权框
+                        document.getElementById("authOverlay").classList.add("hidden");
+                        // 加载数据
+                        await loadBgImage(tokenObj.value);
+                        await loadRecords(tokenObj.value);
+                    } else {
+                        // Token过期，显示授权框
+                        document.getElementById("authOverlay").classList.remove("hidden");
+                    }
+                } catch (e) {
+                    // Token格式错误，显示授权框
+                    document.getElementById("authOverlay").classList.remove("hidden");
+                }
+            } else {
+                // 没有Token，显示授权框
+                document.getElementById("authOverlay").classList.remove("hidden");
+            }
+        };
+
+        // Token授权
+        function saveToken() {
+            const token = document.getElementById("githubToken").value.trim();
+            if (!token) {
+                alert("请输入有效的GitHub Token！");
+                return;
+            }
+            
+            // 设置Token有效期（1年）
+            const tokenData = {
+                value: token,
+                expireTime: new Date().getTime() + 365 * 24 * 60 * 60 * 1000
+            };
+            
+            // 保存Token
+            localStorage.setItem(GITHUB_TOKEN_KEY, JSON.stringify(tokenData));
+            
+            // 保存Gist ID
             localStorage.setItem(GIST_ID_KEY, FIXED_GIST_ID);
             
-            // 跳过授权框，直接加载数据（不用再弹授权）
-                        
-                        // 直接加载数据，不验证Token（避免网络问题导致重新授权）
-                        try {
-                            await loadBgImage(token);
-                            await loadRecords(token);
-                        } catch (e) {
-                            alert("数据加载稍慢（网络问题），刷新即可正常使用～");
-                        }
-                    };
-            
-                    // Token授权（仅首次执行，添加保存验证+有效期，确保Token不会丢失）
-                    function saveToken() {
-                        const token = document.getElementById("githubToken").value.trim();
-                        if (!token) {
-                            alert("请输入有效的GitHub Token！");
-                            return;
-                        }
-                        
-                        // 关键修改1：添加Token有效期（设置为1年，1年后才需要重新授权，足够用）
-                        const tokenData = {
-                            value: token,
-                            expireTime: new Date().getTime() + 365 * 24 * 60 * 60 * 1000 // 1年有效期（毫秒）
-                        };
-                        
-                        // 关键修改2：保存Token（同时存到localStorage和sessionStorage，双重备份，防止丢失）
-                        localStorage.setItem(GITHUB_TOKEN_KEY, JSON.stringify(tokenData));
-                        sessionStorage.setItem(GITHUB_TOKEN_KEY + "_backup", token);
-                        
-                        // 关键修改3：验证Token是否保存成功
-                        const savedTokenData = localStorage.getItem(GITHUB_TOKEN_KEY);
-                        if (!savedTokenData) {
-                            // 若localStorage保存失败，用sessionStorage备份，至少保证当前会话不用重复输
-                            alert("本地存储受限，已用临时备份保存Token，当前会话无需重复授权～");
-                        } else {
-                            alert("授权成功！从此该设备无需重复授权（1年内有效）～");
-                        }
-            
-            // 隐藏授权框，初始化数据
+            // 隐藏授权框
             document.getElementById("authOverlay").classList.add("hidden");
+            
+            // 初始化数据
             loadBgImage(token);
             loadRecords(token);
+            
+            alert("授权成功！");
         }
 
-        // 背景图片处理 - 云端同步版
+        // 背景图片预览
         function previewBgImage(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -464,61 +467,66 @@
             reader.readAsDataURL(file);
         }
 
+        // 保存背景图片
         async function saveBgImage() {
             if (!bgImageFile) {
                 alert("请先选择背景图片！");
                 return;
             }
             
-            const token = localStorage.getItem(GITHUB_TOKEN_KEY);
-            if (!token) {
+            const tokenData = localStorage.getItem(GITHUB_TOKEN_KEY);
+            if (!tokenData) {
                 alert("请先授权！");
                 return;
             }
             
+            const token = JSON.parse(tokenData).value;
             showLoading(true);
             
-            // 上传图片到GitHub Gist（转Base64存储）
             const reader = new FileReader();
             reader.onload = async function(e) {
                 const bgImageUrl = e.target.result;
-                const gistId = FIXED_GIST_ID;
-                let records = [];
                 
-                // 读取现有数据
                 try {
-                    const res = await axios.get(`https://api.github.com/gists/${gistId}`, {
-                        headers: { Authorization: `token ${token}` }
-                    });
-                    const content = JSON.parse(res.data.files["records.json"].content);
-                    records = content.records || [];
-                } catch (e) {
-                    console.error("读取Gist失败", e);
-                }
-                
-                // 保存背景+记录到云端
-                const data = {
-                    bgImageUrl: bgImageUrl,
-                    records: records
-                };
-                
-                // 更新Gist（无需创建，固定ID）
-                await axios.patch(`https://api.github.com/gists/${gistId}`, {
-                    files: {
-                        "records.json": { content: JSON.stringify(data) }
+                    // 读取现有数据
+                    let records = [];
+                    try {
+                        const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
+                            headers: { Authorization: `token ${token}` }
+                        });
+                        const content = JSON.parse(res.data.files["records.json"].content);
+                        records = content.records || [];
+                    } catch (e) {
+                        console.log("新建Gist");
                     }
-                }, { headers: { Authorization: `token ${token}` } });
-                
-                showLoading(false);
-                alert("背景保存成功！所有设备都会同步～");
+                    
+                    // 保存数据
+                    const data = {
+                        bgImageUrl: bgImageUrl,
+                        records: records
+                    };
+                    
+                    await axios.patch(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
+                        files: {
+                            "records.json": { content: JSON.stringify(data) }
+                        }
+                    }, { headers: { Authorization: `token ${token}` } });
+                    
+                    showLoading(false);
+                    alert("背景保存成功！");
+                } catch (e) {
+                    showLoading(false);
+                    console.error("保存背景失败", e);
+                    alert("保存失败，请检查Token权限！");
+                }
             };
             reader.readAsDataURL(bgImageFile);
         }
 
+        // 加载背景图片
         async function loadBgImage(token) {
-            const gistId = FIXED_GIST_ID;
             try {
-                const res = await axios.get(`https://api.github.com/gists/${gistId}`, {
+                const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
                     headers: { Authorization: `token ${token}` }
                 });
                 const content = JSON.parse(res.data.files["records.json"].content);
@@ -526,41 +534,44 @@
                     document.getElementById("mainBody").style.backgroundImage = `url(${content.bgImageUrl})`;
                 }
             } catch (e) {
-                console.error("加载背景失败", e);
+                console.log("暂无背景图片");
             }
         }
 
-        function resetBg() {
-            const token = localStorage.getItem(GITHUB_TOKEN_KEY);
-            if (!token) {
+        // 重置背景
+        async function resetBg() {
+            const tokenData = localStorage.getItem(GITHUB_TOKEN_KEY);
+            if (!tokenData) {
                 alert("请先授权！");
                 return;
             }
             
+            const token = JSON.parse(tokenData).value;
             showLoading(true);
             
-            // 清空背景
-            document.getElementById("mainBody").style.backgroundImage = "none";
-            document.getElementById("mainBody").style.backgroundColor = "#f9f9f9";
-            
-            const gistId = FIXED_GIST_ID;
-            axios.get(`https://api.github.com/gists/${gistId}`, {
-                headers: { Authorization: `token ${token}` }
-            }).then(res => {
+            try {
+                const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
+                    headers: { Authorization: `token ${token}` }
+                });
                 const content = JSON.parse(res.data.files["records.json"].content);
                 content.bgImageUrl = "";
-                return axios.patch(`https://api.github.com/gists/${gistId}`, {
+                
+                await axios.patch(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
                     files: {
                         "records.json": { content: JSON.stringify(content) }
                     }
                 }, { headers: { Authorization: `token ${token}` } });
-            }).then(() => {
+                
+                document.getElementById("mainBody").style.backgroundImage = "none";
+                document.getElementById("mainBody").style.backgroundColor = "#f9f9f9";
+                
                 showLoading(false);
-                alert("背景已重置！所有设备同步～");
-            }).catch(e => {
+                alert("背景已重置！");
+            } catch (e) {
                 showLoading(false);
                 console.error("重置背景失败", e);
-            });
+                alert("重置失败！");
+            }
         }
 
         // 媒体预览
@@ -570,23 +581,24 @@
             if (!file) return;
             
             previewFiles[type] = file;
-            const previewArea = document.getElementById("previewArea");
-            
-            // 清空旧预览
-            const typeElements = previewArea.querySelectorAll(`.preview-${type}`);
-            typeElements.forEach(el => el.remove());
             
             const reader = new FileReader();
             reader.onload = function(e) {
+                const previewArea = document.getElementById("previewArea");
+                
+                // 移除同类型的旧预览
+                const oldPreviews = previewArea.querySelectorAll(`.preview-${type}`);
+                oldPreviews.forEach(el => el.remove());
+                
                 if (type === "image") {
                     const img = document.createElement("img");
                     img.src = e.target.result;
-                    img.className = "preview-img";
+                    img.className = "preview-img preview-image";
                     previewArea.appendChild(img);
                 } else if (type === "video") {
                     const video = document.createElement("video");
                     video.src = e.target.result;
-                    video.className = "preview-video";
+                    video.className = "preview-video preview-video";
                     video.controls = true;
                     previewArea.appendChild(video);
                 }
@@ -595,228 +607,256 @@
             reader.readAsDataURL(file);
         }
 
-        // 记录管理 - 云端同步核心版（新增自动渲染，无需刷新）
+        // 加载记录
         async function loadRecords(token) {
             showLoading(true);
-            const gistId = FIXED_GIST_ID;
             let records = [];
             
             try {
-                const res = await axios.get(`https://api.github.com/gists/${gistId}`, {
+                const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
                     headers: { Authorization: `token ${token}` }
                 });
                 const content = JSON.parse(res.data.files["records.json"].content);
                 records = content.records || [];
             } catch (e) {
-                console.error("加载记录失败", e);
-                alert("加载记录失败，将自动创建新的云端数据库～");
+                console.log("创建新记录集合");
             }
             
             // 按时间倒序排序
             records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             
             // 渲染记录
+            renderRecords(records);
+            showLoading(false);
+        }
+
+        // 渲染记录列表
+        function renderRecords(records) {
             const recordsList = document.getElementById("recordsList");
             recordsList.innerHTML = "";
             
             records.forEach(record => {
-                const card = document.createElement("div");
-                card.className = "record-card";
-                card.innerHTML = `
-                    <div class="record-header">
-                        <span class="record-time">${formatTime(record.timestamp)}</span>
-                        <span class="record-type">${record.type}</span>
-                    </div>
-                    <div class="record-content">${record.content.replace(/\n/g, "<br>")}</div>
-                    <div class="record-media">
-                        ${record.imageUrl ? `<img src="${record.imageUrl}" alt="记录图片">` : ""}
-                        ${record.videoUrl ? `<video controls src="${record.videoUrl}"></video>` : ""}
-                    </div>
-                    <div class="record-actions">
-                        <button class="edit-btn" onclick="editRecord('${record.id}')">编辑</button>
-                        <button class="delete-btn" onclick="deleteRecord('${record.id}')">删除</button>
-                    </div>
-                `;
+                const card = createRecordCard(record);
                 recordsList.appendChild(card);
             });
-            
-            showLoading(false);
         }
 
+        // 创建记录卡片
+        function createRecordCard(record) {
+            const card = document.createElement("div");
+            card.className = "record-card";
+            card.id = `record-${record.id}`;
+            
+            let mediaHtml = '';
+            if (record.imageUrl) {
+                mediaHtml += `<img src="${record.imageUrl}" alt="记录图片">`;
+            }
+            if (record.videoUrl) {
+                mediaHtml += `<video controls src="${record.videoUrl}"></video>`;
+            }
+            
+            card.innerHTML = `
+                <div class="record-header">
+                    <span class="record-time">${formatTime(record.timestamp)}</span>
+                    <span class="record-type">${record.type}</span>
+                </div>
+                <div class="record-content">${record.content.replace(/\n/g, "<br>")}</div>
+                <div class="record-media">
+                    ${mediaHtml}
+                </div>
+                <div class="record-actions">
+                    <button class="edit-btn" onclick="editRecord('${record.id}')">编辑</button>
+                    <button class="delete-btn" onclick="deleteRecord('${record.id}')">删除</button>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // 保存记录
         async function saveRecord() {
             const type = document.getElementById("contentType").value;
             const content = document.getElementById("contentInput").value.trim();
+            
             if (!content) {
                 alert("请输入记录内容！");
                 return;
             }
             
-            const token = localStorage.getItem(GITHUB_TOKEN_KEY);
-            if (!token) {
+            const tokenData = localStorage.getItem(GITHUB_TOKEN_KEY);
+            if (!tokenData) {
                 alert("请先授权！");
                 return;
             }
             
+            const token = JSON.parse(tokenData).value;
             showLoading(true);
-            
-            // 处理媒体文件（转Base64）
-            let imageUrl = "";
-            let videoUrl = "";
-            
-            if (previewFiles.image) {
-                imageUrl = await fileToBase64(previewFiles.image);
-            }
-            if (previewFiles.video) {
-                videoUrl = await fileToBase64(previewFiles.video);
-            }
-            
-            // 构建记录
-            const record = {
-                id: currentEditId || generateId(),
-                type: type,
-                content: content,
-                timestamp: new Date().toISOString(),
-                imageUrl: imageUrl,
-                videoUrl: videoUrl
-            };
-            
-            // 读取现有记录
-            const gistId = FIXED_GIST_ID;
-            let records = [];
-            let bgImageUrl = "";
             
             try {
-                const res = await axios.get(`https://api.github.com/gists/${gistId}`, {
-                    headers: { Authorization: `token ${token}` }
-                });
-                const content = JSON.parse(res.data.files["records.json"].content);
-                records = content.records || [];
-                bgImageUrl = content.bgImageUrl || "";
-            } catch (e) {
-                console.error("读取记录失败", e);
-            }
-            
-            // 编辑/新增
-            if (currentEditId) {
-                records = records.map(r => r.id === currentEditId ? record : r);
-            } else {
-                records.push(record);
-            }
-            
-            // 保存到云端Gist
-            const data = {
-                bgImageUrl: bgImageUrl,
-                records: records
-            };
-            
-            // 更新Gist
-            await axios.patch(`https://api.github.com/gists/${gistId}`, {
-                files: {
-                    "records.json": { content: JSON.stringify(data) }
+                // 处理媒体文件
+                let imageUrl = "";
+                let videoUrl = "";
+                
+                if (previewFiles.image && previewFiles.image instanceof File) {
+                    imageUrl = await fileToBase64(previewFiles.image);
+                } else if (previewFiles.image && typeof previewFiles.image === 'string') {
+                    imageUrl = previewFiles.image;
                 }
-            }, { headers: { Authorization: `token ${token}` } });
-            
-            // 重置状态
-            resetEditState();
-            // 重新加载记录（同步最新数据）
-            await loadRecords(token);
-            showLoading(false);
-            
-            // 新增：手动渲染最新记录（无需刷新，保存后立即显示）
-            renderSingleRecord(record);
-            
-            alert(currentEditId ? "记录编辑成功！所有设备已同步～" : "记录保存成功！所有设备已同步～");
+                
+                if (previewFiles.video && previewFiles.video instanceof File) {
+                    videoUrl = await fileToBase64(previewFiles.video);
+                } else if (previewFiles.video && typeof previewFiles.video === 'string') {
+                    videoUrl = previewFiles.video;
+                }
+                
+                // 构建记录
+                const record = {
+                    id: currentEditId || generateId(),
+                    type: type,
+                    content: content,
+                    timestamp: new Date().toISOString(),
+                    imageUrl: imageUrl,
+                    videoUrl: videoUrl
+                };
+                
+                // 读取现有数据
+                let records = [];
+                let bgImageUrl = "";
+                
+                try {
+                    const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
+                        headers: { Authorization: `token ${token}` }
+                    });
+                    const content = JSON.parse(res.data.files["records.json"].content);
+                    records = content.records || [];
+                    bgImageUrl = content.bgImageUrl || "";
+                } catch (e) {
+                    console.log("新建Gist");
+                }
+                
+                // 编辑或新增
+                if (currentEditId) {
+                    records = records.map(r => r.id === currentEditId ? record : r);
+                } else {
+                    records.push(record);
+                }
+                
+                // 保存到云端
+                const data = {
+                    bgImageUrl: bgImageUrl,
+                    records: records
+                };
+                
+                await axios.patch(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
+                    files: {
+                        "records.json": { content: JSON.stringify(data) }
+                    }
+                }, { headers: { Authorization: `token ${token}` } });
+                
+                // 重置编辑状态
+                resetEditState();
+                
+                // 重新加载记录
+                await loadRecords(token);
+                
+                showLoading(false);
+                alert(currentEditId ? "记录编辑成功！" : "记录保存成功！");
+            } catch (e) {
+                showLoading(false);
+                console.error("保存记录失败", e);
+                alert("保存失败，请检查Token权限！");
+            }
         }
 
-        function editRecord(id) {
-            const token = localStorage.getItem(GITHUB_TOKEN_KEY);
-            if (!token) {
+        // 编辑记录
+        async function editRecord(id) {
+            const tokenData = localStorage.getItem(GITHUB_TOKEN_KEY);
+            if (!tokenData) {
                 alert("请先授权！");
                 return;
             }
             
+            const token = JSON.parse(tokenData).value;
             showLoading(true);
-            const gistId = FIXED_GIST_ID;
             
-            axios.get(`https://api.github.com/gists/${gistId}`, {
-                headers: { Authorization: `token ${token}` }
-            }).then(res => {
+            try {
+                const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
+                    headers: { Authorization: `token ${token}` }
+                });
+                
                 const content = JSON.parse(res.data.files["records.json"].content);
                 const record = content.records.find(r => r.id === id);
-                if (!record) return;
                 
-                // 填充表单
-                document.getElementById("contentType").value = record.type;
-                document.getElementById("contentInput").value = record.content;
-                currentEditId = id;
-                
-                // 预览媒体
-                const previewArea = document.getElementById("previewArea");
-                previewArea.innerHTML = "";
-                if (record.imageUrl) {
-                    const img = document.createElement("img");
-                    img.src = record.imageUrl;
-                    img.className = "preview-img";
-                    previewArea.appendChild(img);
-                    previewFiles.image = record.imageUrl;
+                if (record) {
+                    // 填充表单
+                    document.getElementById("contentType").value = record.type;
+                    document.getElementById("contentInput").value = record.content;
+                    currentEditId = id;
+                    
+                    // 预览媒体
+                    const previewArea = document.getElementById("previewArea");
+                    previewArea.innerHTML = "";
+                    
+                    if (record.imageUrl) {
+                        const img = document.createElement("img");
+                        img.src = record.imageUrl;
+                        img.className = "preview-img preview-image";
+                        previewArea.appendChild(img);
+                        previewFiles.image = record.imageUrl;
+                    }
+                    if (record.videoUrl) {
+                        const video = document.createElement("video");
+                        video.src = record.videoUrl;
+                        video.className = "preview-video preview-video";
+                        video.controls = true;
+                        previewArea.appendChild(video);
+                        previewFiles.video = record.videoUrl;
+                    }
+                    
+                    // 切换按钮状态
+                    document.getElementById("editTitle").textContent = "✏️ 编辑记事";
+                    document.getElementById("cancelEditBtn").classList.remove("hidden");
                 }
-                if (record.videoUrl) {
-                    const video = document.createElement("video");
-                    video.src = record.videoUrl;
-                    video.className = "preview-video";
-                    video.controls = true;
-                    previewArea.appendChild(video);
-                    previewFiles.video = record.videoUrl;
-                }
-                
-                // 切换按钮状态
-                document.getElementById("editTitle").textContent = "✏️ 编辑记事";
-                document.getElementById("cancelEditBtn").classList.remove("hidden");
                 
                 showLoading(false);
-            }).catch(e => {
+            } catch (e) {
                 showLoading(false);
                 console.error("编辑记录失败", e);
                 alert("编辑失败！");
-            });
+            }
         }
 
+        // 删除记录
         async function deleteRecord(id) {
             if (!confirm("确定要删除这条记录吗？")) return;
             
-            const token = localStorage.getItem(GITHUB_TOKEN_KEY);
-            if (!token) {
+            const tokenData = localStorage.getItem(GITHUB_TOKEN_KEY);
+            if (!tokenData) {
                 alert("请先授权！");
                 return;
             }
             
+            const token = JSON.parse(tokenData).value;
             showLoading(true);
-            const gistId = FIXED_GIST_ID;
             
             try {
-                // 读取现有记录
-                const res = await axios.get(`https://api.github.com/gists/${gistId}`, {
+                const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
                     headers: { Authorization: `token ${token}` }
                 });
+                
                 const content = JSON.parse(res.data.files["records.json"].content);
-                let records = content.records || [];
+                const records = content.records.filter(r => r.id !== id);
                 const bgImageUrl = content.bgImageUrl || "";
                 
-                // 删除记录
-                records = records.filter(r => r.id !== id);
-                
-                // 保存到云端
-                await axios.patch(`https://api.github.com/gists/${gistId}`, {
+                await axios.patch(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
                     files: {
                         "records.json": { content: JSON.stringify({ bgImageUrl, records }) }
                     }
                 }, { headers: { Authorization: `token ${token}` } });
                 
-                // 重新加载记录
                 await loadRecords(token);
                 showLoading(false);
-                
-                alert("记录删除成功！所有设备已同步～");
+                alert("记录删除成功！");
             } catch (e) {
                 showLoading(false);
                 console.error("删除记录失败", e);
@@ -824,16 +864,23 @@
             }
         }
 
+        // 取消编辑
         function cancelEdit() {
             resetEditState();
         }
 
+        // 重置编辑状态
         function resetEditState() {
             document.getElementById("contentType").value = "日常思考";
             document.getElementById("contentInput").value = "";
             document.getElementById("previewArea").innerHTML = "";
             document.getElementById("editTitle").textContent = "✍️ 小屋记事";
             document.getElementById("cancelEditBtn").classList.add("hidden");
+            
+            // 清空文件输入
+            document.getElementById("imageUpload").value = "";
+            document.getElementById("videoUpload").value = "";
+            
             currentEditId = null;
             previewFiles = { image: null, video: null };
             bgImageFile = null;
@@ -873,55 +920,6 @@
                 overlay.classList.add("hidden");
             }
         }
-
-        // 新增：手动渲染单条记录（保存后实时显示，无需刷新）
-        function renderSingleRecord(record) {
-            const recordsList = document.getElementById("recordsList");
-            // 创建新记录卡片
-            const card = document.createElement("div");
-            card.className = "record-card";
-            card.innerHTML = `
-                <div class="record-header">
-                    <span class="record-time">${formatTime(record.timestamp)}</span>
-                    <span class="record-type">${record.type}</span>
-                </div>
-                <div class="record-content">${record.content.replace(/\n/g, "<br>")}</div>
-                <div class="record-media">
-                    ${record.imageUrl ? `<img src="${record.imageUrl}" alt="记录图片">` : ""}
-                    ${record.videoUrl ? `<video controls src="${record.videoUrl}"></video>` : ""}
-                </div>
-                <div class="record-actions">
-                    <button class="edit-btn" onclick="editRecord('${record.id}')">编辑</button>
-                    <button class="delete-btn" onclick="deleteRecord('${record.id}')">删除</button>
-                </div>
-            `;
-            // 将新卡片插入到列表最顶部（实时显示最新记录）
-            recordsList.insertBefore(card, recordsList.firstChild);
-        }
-
-        // 新增：Token手动备份功能（极端情况备用，可选使用）
-        function backupToken() {
-            const savedTokenData = localStorage.getItem(GITHUB_TOKEN_KEY);
-            if (savedTokenData) {
-                const tokenObj = JSON.parse(savedTokenData);
-                // 弹出Token，提示用户手动备份（复制保存，极端情况可重新粘贴）
-                alert(`请复制此Token备份（极端情况使用）：\n${tokenObj.value}\n\n备份后，即使本地存储被清理，也可重新粘贴授权`);
-            } else {
-                alert("请先完成授权，再进行Token备份～");
-            }
-        }
-
-        // 新增：页面加载后，自动提示一次备份（仅一次，不打扰使用）
-        window.addEventListener("load", function() {
-            const savedTokenData = localStorage.getItem(GITHUB_TOKEN_KEY);
-            if (savedTokenData && !localStorage.getItem("backupHintShown")) {
-                setTimeout(() => {
-                    alert("授权成功！为防止Token丢失，可点击浏览器F12→Application→LocalStorage，找到githubToken备份，或后续需要时，联系我获取手动备份方法～");
-                    localStorage.setItem("backupHintShown", "true"); // 仅提示一次
-                }, 3000);
-            }
-        });
     </script>
 </body>
 </html>
-
