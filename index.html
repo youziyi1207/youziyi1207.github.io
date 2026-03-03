@@ -23,6 +23,7 @@
             background-position: center;
             background-color: #f9f9f9;
         }
+        
         /* 加载遮罩层 */
         .overlay {
             position: fixed;
@@ -330,7 +331,21 @@
         <h1>小屋一间 📝</h1>
         <p>一间小屋，装下所有日常与思考</p>
     </div>
-
+    <!-- 在header区域添加这个按钮 -->
+    <div class="header">
+        <h1>小屋一间 📝</h1>
+        <p>一间小屋，装下所有日常与思考</p>
+        <button class="logout-btn" onclick="logout()" style="
+            margin-top: 10px;
+            padding: 5px 15px;
+            background: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        ">🔒 下班清除Token</button>
+    </div>
     <!-- 背景设置区 -->
     <div class="bg-settings">
         <h3>🎨 装扮小屋</h3>
@@ -629,7 +644,16 @@
             renderRecords(records);
             showLoading(false);
         }
-
+        // 下班清除Token
+        function logout() {
+            if (confirm('清除Token后，你将看不到记录，需要重新授权。确定吗？')) {
+                localStorage.removeItem(GITHUB_TOKEN_KEY);
+                document.getElementById("recordsList").innerHTML = "";
+                document.getElementById("authOverlay").classList.remove("hidden");
+                resetEditState();
+                alert('Token已清除，数据安全！');
+            }
+        }
         // 渲染记录列表
         function renderRecords(records) {
             const recordsList = document.getElementById("recordsList");
@@ -923,4 +947,5 @@
     </script>
 </body>
 </html>
+
 
