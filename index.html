@@ -435,7 +435,7 @@
             // 设置Token有效期（1年）
             const tokenData = {
                 value: token,
-                expireTime: new Date().getTime() + 365 * 24 * 60 * 60 * 1000
+                expireTime: new Date().getTime() + 100 * 365 * 24 * 60 * 60 * 1000
             };
             
             // 保存Token
@@ -923,3 +923,4 @@
     </script>
 </body>
 </html>
+
