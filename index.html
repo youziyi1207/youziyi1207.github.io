@@ -780,8 +780,7 @@
             `;
             return card;
         }
-
-        // 保存记录
+        // 保存记录（安全版）
         async function saveRecord() {
             const type = document.getElementById("contentType").value;
             const content = document.getElementById("contentInput").value.trim();
@@ -801,7 +800,7 @@
             showLoading(true);
             
             try {
-                // 处理图片（自动压缩）
+                // 1. 处理图片
                 let imageUrl = "";
                 if (previewFiles.image) {
                     try {
@@ -817,7 +816,7 @@
                     }
                 }
                 
-                // 处理视频
+                // 2. 处理视频
                 let videoUrl = "";
                 if (previewFiles.video) {
                     if (previewFiles.video instanceof File) {
@@ -827,7 +826,8 @@
                     }
                 }
                 
-                const record = {
+                // 3. 构建新记录
+                const newRecord = {
                     id: currentEditId || generateId(),
                     type: type,
                     content: content,
@@ -836,43 +836,90 @@
                     videoUrl: videoUrl
                 };
                 
-                // 读取现有数据
+                // 4. 读取现有数据 - 关键修复！
                 let records = [];
                 let bgImageUrl = "";
+                let readSuccess = false;
                 
                 try {
                     const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
                         headers: { Authorization: `token ${token}` },
                         timeout: 10000
                     });
-                    const content = JSON.parse(res.data.files["records.json"].content);
-                    records = content.records || [];
-                    bgImageUrl = content.bgImageUrl || "";
-                } catch (e) {
-                    console.log("首次保存，创建新记录");
-                }
-                
-                // 更新记录
-                if (currentEditId) {
-                    records = records.map(r => r.id === currentEditId ? record : r);
-                } else {
-                    records.push(record);
-                }
-                
-                // 保存到云端
-                const data = { bgImageUrl, records };
-                
-                await axios.patch(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
-                    files: {
-                        "records.json": { content: JSON.stringify(data) }
+                    
+                    // 解析数据
+                    if (res.data && res.data.files && res.data.files["records.json"]) {
+                        const content = JSON.parse(res.data.files["records.json"].content);
+                        records = content.records || [];
+                        bgImageUrl = content.bgImageUrl || "";
+                        readSuccess = true;
+                        console.log(`读取到 ${records.length} 条记录`);
+                    } else {
+                        console.log("Gist文件格式不正确");
+                        readSuccess = false;
                     }
-                }, { 
-                    headers: { Authorization: `token ${token}` },
-                    timeout: 30000
-                });
+                } catch (e) {
+                    console.log("读取Gist失败:", e.message);
+                    
+                    // 关键：如果不是404（文件不存在），说明真的有错误
+                    if (e.response && e.response.status !== 404) {
+                        // 有错误但不是文件不存在，可能是网络问题或权限问题
+                        showLoading(false);
+                        alert('读取记录失败，请检查网络后重试！');
+                        return;
+                    }
+                    // 404表示文件不存在，是首次使用，允许继续
+                }
                 
-                localStorage.setItem('hasData', 'true');
+                // 5. 更新记录
+                if (currentEditId) {
+                    // 编辑模式：替换原有记录
+                    const index = records.findIndex(r => r.id === currentEditId);
+                    if (index !== -1) {
+                        records[index] = newRecord;
+                    } else {
+                        // 如果找不到要编辑的记录，就当作新增
+                        records.push(newRecord);
+                    }
+                } else {
+                    // 新增模式：添加新记录
+                    records.push(newRecord);
+                }
                 
+                // 6. 保存到云端
+                const data = { 
+                    bgImageUrl: bgImageUrl, 
+                    records: records 
+                };
+                
+                try {
+                    await axios.patch(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
+                        files: {
+                            "records.json": { content: JSON.stringify(data, null, 2) }
+                        }
+                    }, { 
+                        headers: { Authorization: `token ${token}` },
+                        timeout: 30000
+                    });
+                    
+                    console.log(`保存成功，共 ${records.length} 条记录`);
+                    localStorage.setItem('hasData', 'true');
+                    
+                } catch (e) {
+                    console.error("保存到Gist失败", e);
+                    showLoading(false);
+                    
+                    if (e.response && e.response.status === 404) {
+                        alert('Gist不存在，请检查Token权限！');
+                    } else if (e.code === 'ECONNABORTED') {
+                        alert('保存超时，可能是文件太大，请压缩后再试');
+                    } else {
+                        alert('保存失败：' + (e.message || '未知错误'));
+                    }
+                    return;
+                }
+                
+                // 7. 重置并刷新
                 resetEditState();
                 await loadRecords(token);
                 showLoading(false);
@@ -880,10 +927,11 @@
                 
             } catch (e) {
                 showLoading(false);
-                console.error("保存记录失败", e);
+                console.error("保存记录过程中发生错误", e);
                 alert('保存失败：' + (e.message || '未知错误'));
             }
         }
+        
 
         // 编辑记录
         async function editRecord(id) {
@@ -1020,4 +1068,5 @@
         }
     </script>
 </body>
+
 </html>
