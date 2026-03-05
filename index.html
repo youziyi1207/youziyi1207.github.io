@@ -136,6 +136,44 @@
             font-size: 14px;
             line-height: 1.6;
         }
+        /* 多媒体上传 */
+        .media-upload {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .media-item {
+            flex: 1;
+            min-width: 200px;
+        }
+        #imageUpload, #videoUpload {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .preview-area {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px;
+            border: 1px dashed #ddd;
+            border-radius: 8px;
+        }
+        .preview-img {
+            width: 120px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+        .preview-video {
+            width: 200px;
+            height: 120px;
+            border-radius: 6px;
+        }
         /* 提交/编辑按钮 */
         .btn-group {
             display: flex;
@@ -201,6 +239,22 @@
             margin-bottom: 15px;
             font-size: 15px;
         }
+        .record-media {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .record-media img {
+            max-width: 200px;
+            max-height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .record-media video {
+            max-width: 300px;
+            max-height: 200px;
+            border-radius: 8px;
+        }
         .record-actions {
             display: flex;
             gap: 10px;
@@ -223,6 +277,15 @@
         }
         /* 响应式适配 */
         @media (max-width: 768px) {
+            .media-upload {
+                flex-direction: column;
+            }
+            .record-media img {
+                max-width: 100%;
+            }
+            .record-media video {
+                max-width: 100%;
+            }
             .btn-group {
                 flex-direction: column;
             }
@@ -296,6 +359,19 @@
             <label for="contentInput">记录内容</label>
             <textarea id="contentInput" placeholder=""></textarea>
         </div>
+        <!-- 多媒体上传（隐藏） -->
+        <div class="media-upload hidden">
+          <div class="media-item">
+            <label for="imageUpload">添加图片</label>
+            <input type="file" id="imageUpload" accept="image/*" onchange="previewMedia('image')">
+          </div>
+          <div class="media-item">
+            <label for="videoUpload">添加视频</label>
+            <input type="file" id="videoUpload" accept="video/*" onchange="previewMedia('video')">
+          </div>
+        </div>
+        <!-- 预览区域（隐藏） -->
+        <div class="preview-area hidden" id="previewArea"></div>
         <!-- 按钮组 -->
         <div class="btn-group">
             <button id="submitBtn" onclick="saveRecord()">保存记录</button>
@@ -316,6 +392,7 @@
         const FIXED_GIST_ID = "74c69252b631b6c98f3a28f039a2f547";
         
         let currentEditId = null;
+        let previewFiles = { image: null, video: null };
         let bgImageFile = null;
 
         // 页面加载初始化
@@ -497,6 +574,39 @@
             }
         }
 
+        // 媒体预览
+        function previewMedia(type) {
+            const fileInput = document.getElementById(`${type}Upload`);
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            previewFiles[type] = file;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const previewArea = document.getElementById("previewArea");
+                
+                // 移除同类型的旧预览
+                const oldPreviews = previewArea.querySelectorAll(`.preview-${type}`);
+                oldPreviews.forEach(el => el.remove());
+                
+                if (type === "image") {
+                    const img = document.createElement("img");
+                    img.src = e.target.result;
+                    img.className = "preview-img preview-image";
+                    previewArea.appendChild(img);
+                } else if (type === "video") {
+                    const video = document.createElement("video");
+                    video.src = e.target.result;
+                    video.className = "preview-video preview-video";
+                    video.controls = true;
+                    previewArea.appendChild(video);
+                }
+            };
+            
+            reader.readAsDataURL(file);
+        }
+
         // 加载记录
         async function loadRecords(token) {
             showLoading(true);
@@ -537,12 +647,23 @@
             card.className = "record-card";
             card.id = `record-${record.id}`;
             
+            let mediaHtml = '';
+            if (record.imageUrl) {
+                mediaHtml += `<img src="${record.imageUrl}" alt="记录图片">`;
+            }
+            if (record.videoUrl) {
+                mediaHtml += `<video controls src="${record.videoUrl}"></video>`;
+            }
+            
             card.innerHTML = `
                 <div class="record-header">
                     <span class="record-time">${formatTime(record.timestamp)}</span>
                     <span class="record-type">${record.type}</span>
                 </div>
                 <div class="record-content">${record.content.replace(/\n/g, "<br>")}</div>
+                <div class="record-media">
+                    ${mediaHtml}
+                </div>
                 <div class="record-actions">
                     <button class="edit-btn" onclick="editRecord('${record.id}')">编辑</button>
                     <button class="delete-btn" onclick="deleteRecord('${record.id}')">删除</button>
@@ -572,12 +693,30 @@
             showLoading(true);
             
             try {
+                // 处理媒体文件
+                let imageUrl = "";
+                let videoUrl = "";
+                
+                if (previewFiles.image && previewFiles.image instanceof File) {
+                    imageUrl = await fileToBase64(previewFiles.image);
+                } else if (previewFiles.image && typeof previewFiles.image === 'string') {
+                    imageUrl = previewFiles.image;
+                }
+                
+                if (previewFiles.video && previewFiles.video instanceof File) {
+                    videoUrl = await fileToBase64(previewFiles.video);
+                } else if (previewFiles.video && typeof previewFiles.video === 'string') {
+                    videoUrl = previewFiles.video;
+                }
+                
                 // 构建记录
                 const record = {
                     id: currentEditId || generateId(),
                     type: type,
                     content: content,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    imageUrl: imageUrl,
+                    videoUrl: videoUrl
                 };
                 
                 // 读取现有数据
@@ -654,6 +793,26 @@
                     document.getElementById("contentInput").value = record.content;
                     currentEditId = id;
                     
+                    // 预览媒体
+                    const previewArea = document.getElementById("previewArea");
+                    previewArea.innerHTML = "";
+                    
+                    if (record.imageUrl) {
+                        const img = document.createElement("img");
+                        img.src = record.imageUrl;
+                        img.className = "preview-img preview-image";
+                        previewArea.appendChild(img);
+                        previewFiles.image = record.imageUrl;
+                    }
+                    if (record.videoUrl) {
+                        const video = document.createElement("video");
+                        video.src = record.videoUrl;
+                        video.className = "preview-video preview-video";
+                        video.controls = true;
+                        previewArea.appendChild(video);
+                        previewFiles.video = record.videoUrl;
+                    }
+                    
                     // 切换按钮状态
                     document.getElementById("editTitle").textContent = "✏️ 编辑记事";
                     document.getElementById("cancelEditBtn").classList.remove("hidden");
@@ -714,10 +873,16 @@
         function resetEditState() {
             document.getElementById("contentType").value = "日常思考";
             document.getElementById("contentInput").value = "";
+            document.getElementById("previewArea").innerHTML = "";
             document.getElementById("editTitle").textContent = "✍️ 小屋记事";
             document.getElementById("cancelEditBtn").classList.add("hidden");
             
+            // 清空文件输入
+            document.getElementById("imageUpload").value = "";
+            document.getElementById("videoUpload").value = "";
+            
             currentEditId = null;
+            previewFiles = { image: null, video: null };
             bgImageFile = null;
         }
 
@@ -735,6 +900,15 @@
                 hour: "2-digit",
                 minute: "2-digit",
                 second: "2-digit"
+            });
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = e => reject(e);
+                reader.readAsDataURL(file);
             });
         }
 
