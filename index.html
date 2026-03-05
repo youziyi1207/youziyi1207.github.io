@@ -95,13 +95,14 @@
         }
         .bg-btn:hover {
             transform: translateY(-2px);
+            background: #f0f0f0;
         }
         /* 编辑区域 */
         .edit-panel {
             background: rgba(255, 255, 255, 0.95);
             padding: 25px;
             border-radius: 12px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
             margin-bottom: 40px;
         }
         .edit-panel h3 {
@@ -136,48 +137,11 @@
             font-size: 14px;
             line-height: 1.6;
         }
-        /* 多媒体上传 */
-        .media-upload {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-        }
-        .media-item {
-            flex: 1;
-            min-width: 200px;
-        }
-        #imageUpload, #videoUpload {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-        .preview-area {
-            margin-top: 10px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 10px;
-            border: 1px dashed #ddd;
-            border-radius: 8px;
-        }
-        .preview-img {
-            width: 120px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 6px;
-        }
-        .preview-video {
-            width: 200px;
-            height: 120px;
-            border-radius: 6px;
-        }
         /* 提交/编辑按钮 */
         .btn-group {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
         #submitBtn, #cancelEditBtn {
             background: #4CAF50;
@@ -239,26 +203,9 @@
             margin-bottom: 15px;
             font-size: 15px;
         }
-        .record-media {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        .record-media img {
-            max-width: 200px;
-            max-height: 150px;
-            object-fit: cover;
-            border-radius: 8px;
-        }
-        .record-media video {
-            max-width: 300px;
-            max-height: 200px;
-            border-radius: 8px;
-        }
         .record-actions {
             display: flex;
             gap: 10px;
-            margin-top: 15px;
         }
         .edit-btn, .delete-btn {
             padding: 6px 12px;
@@ -266,34 +213,24 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 12px;
+            color: white;
         }
         .edit-btn {
             background: #2196F3;
-            color: white;
         }
         .delete-btn {
             background: #f44336;
-            color: white;
         }
         /* 响应式适配 */
         @media (max-width: 768px) {
-            .media-upload {
-                flex-direction: column;
-            }
-            .record-media img {
-                max-width: 100%;
-            }
-            .record-media video {
-                max-width: 100%;
-            }
             .btn-group {
                 flex-direction: column;
             }
+            #submitBtn, #cancelEditBtn {
+                width: 100%;
+            }
         }
         /* 授权弹框优化 */
-        #authOverlay {
-            background: rgba(0,0,0,0.8);
-        }
         #authOverlay input {
             padding: 10px;
             width: 90%;
@@ -301,11 +238,13 @@
             border-radius: 8px;
             border: none;
             outline: none;
+            font-size: 14px;
         }
         #authOverlay .bg-btn {
             background: #4CAF50;
             color: white;
             padding: 10px 30px;
+            font-size: 16px;
         }
     </style>
 </head>
@@ -328,10 +267,10 @@
     <!-- 顶部标题 -->
     <div class="header">
         <h1>小屋一间 📝</h1>
-        <p>一间小屋，装下所有日常与思考</p>
+        <p>记录日常思考，留存生活点滴</p>
     </div>
 
-    <!-- 背景设置区 -->
+    <!-- 背景设置区（可选隐藏，如需隐藏加 hidden 类） -->
     <div class="bg-settings">
         <h3>🎨 装扮小屋</h3>
         <div class="bg-controls">
@@ -343,7 +282,7 @@
 
     <!-- 编辑面板 -->
     <div class="edit-panel">
-        <h3 id="editTitle">✍️ 小屋记事</h3>
+        <h3 id="editTitle">✍️ 写点什么</h3>
         <div class="input-group">
             <label for="contentType">记录类型</label>
             <select id="contentType">
@@ -357,20 +296,20 @@
         </div>
         <div class="input-group">
             <label for="contentInput">记录内容</label>
-            <textarea id="contentInput" placeholder=""></textarea>
+            <textarea id="contentInput" placeholder="输入你想记录的内容..."></textarea>
         </div>
-        <!-- 多媒体上传（隐藏） -->
+        <!-- 图片/视频上传区域（永久隐藏） -->
         <div class="media-upload hidden">
-          <div class="media-item">
-            <label for="imageUpload">添加图片</label>
-            <input type="file" id="imageUpload" accept="image/*" onchange="previewMedia('image')">
-          </div>
-          <div class="media-item">
-            <label for="videoUpload">添加视频</label>
-            <input type="file" id="videoUpload" accept="video/*" onchange="previewMedia('video')">
-          </div>
+            <div class="media-item">
+                <label for="imageUpload">添加图片</label>
+                <input type="file" id="imageUpload" accept="image/*" onchange="previewMedia('image')">
+            </div>
+            <div class="media-item">
+                <label for="videoUpload">添加视频</label>
+                <input type="file" id="videoUpload" accept="video/*" onchange="previewMedia('video')">
+            </div>
         </div>
-        <!-- 预览区域（隐藏） -->
+        <!-- 预览区域（永久隐藏） -->
         <div class="preview-area hidden" id="previewArea"></div>
         <!-- 按钮组 -->
         <div class="btn-group">
@@ -383,16 +322,12 @@
     <div class="records-list" id="recordsList"></div>
 
     <script>
-        // 全局配置
+        // 全局配置 - 替换成你自己的 Gist ID！！！
+        const FIXED_GIST_ID = "你的GistID"; // 比如：74c69252b631b6c98f3a28f039a2f547
         const GIST_ID_KEY = "myLifeRecordsGistId";
         const GITHUB_TOKEN_KEY = "githubToken";
-        const BG_IMAGE_KEY = "bgImageUrl";
-        
-        // 固定Gist ID
-        const FIXED_GIST_ID = "74c69252b631b6c98f3a28f039a2f547";
         
         let currentEditId = null;
-        let previewFiles = { image: null, video: null };
         let bgImageFile = null;
 
         // 页面加载初始化
@@ -403,15 +338,15 @@
             if (tokenData) {
                 try {
                     const tokenObj = JSON.parse(tokenData);
-                    // 检查Token是否过期
-                    if (tokenObj.expireTime && tokenObj.expireTime > new Date().getTime()) {
+                    // 检查Token是否过期（这里简化处理，实际可根据expireTime判断）
+                    if (tokenObj.value) {
                         // Token有效，隐藏授权框
                         document.getElementById("authOverlay").classList.add("hidden");
                         // 加载数据
                         await loadBgImage(tokenObj.value);
                         await loadRecords(tokenObj.value);
                     } else {
-                        // Token过期，显示授权框
+                        // Token无效，显示授权框
                         document.getElementById("authOverlay").classList.remove("hidden");
                     }
                 } catch (e) {
@@ -419,12 +354,12 @@
                     document.getElementById("authOverlay").classList.remove("hidden");
                 }
             } else {
-                // 没有Token，显示授权框
+                // 无Token，显示授权框
                 document.getElementById("authOverlay").classList.remove("hidden");
             }
         };
 
-        // Token授权
+        // 保存Token到本地
         function saveToken() {
             const token = document.getElementById("githubToken").value.trim();
             if (!token) {
@@ -432,16 +367,13 @@
                 return;
             }
             
-            // 设置Token有效期（1年）
+            // 保存Token（设置有效期为1年）
             const tokenData = {
                 value: token,
                 expireTime: new Date().getTime() + 365 * 24 * 60 * 60 * 1000
             };
             
-            // 保存Token
             localStorage.setItem(GITHUB_TOKEN_KEY, JSON.stringify(tokenData));
-            
-            // 保存Gist ID
             localStorage.setItem(GIST_ID_KEY, FIXED_GIST_ID);
             
             // 隐藏授权框
@@ -454,7 +386,7 @@
             alert("授权成功！");
         }
 
-        // 背景图片预览
+        // 预览背景图片
         function previewBgImage(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -480,45 +412,60 @@
                 return;
             }
             
-            const token = JSON.parse(tokenData).value;
+            const tokenObj = JSON.parse(tokenData);
+            const token = tokenObj.value;
             showLoading(true);
             
             const reader = new FileReader();
             reader.onload = async function(e) {
                 const bgImageUrl = e.target.result;
-                
                 try {
-                    // 读取现有数据
-                    let records = [];
-                    try {
-                        const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
-                            headers: { Authorization: `token ${token}` }
-                        });
-                        const content = JSON.parse(res.data.files["records.json"].content);
-                        records = content.records || [];
-                    } catch (e) {
-                        console.log("新建Gist");
-                    }
-                    
-                    // 保存数据
-                    const data = {
-                        bgImageUrl: bgImageUrl,
-                        records: records
+                    // 获取现有数据
+                    let gistData = {
+                        files: {
+                            "records.json": {
+                                content: JSON.stringify({ bgImageUrl: "", records: [] })
+                            }
+                        }
                     };
                     
-                    await axios.patch(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
-                        files: {
-                            "records.json": { content: JSON.stringify(data) }
+                    try {
+                        const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
+                            headers: {
+                                'Authorization': `token ${token}`,
+                                'Accept': 'application/vnd.github.v3+json'
+                            }
+                        });
+                        const oldContent = res.data.files['records.json']?.content;
+                        if (oldContent) {
+                            gistData.files['records.json'].content = oldContent;
                         }
-                    }, { headers: { Authorization: `token ${token}` } });
+                    } catch (e) {
+                        if (e.response?.status !== 404) {
+                            throw e;
+                        }
+                    }
                     
-                    showLoading(false);
+                    // 更新背景图片地址
+                    const data = JSON.parse(gistData.files['records.json'].content);
+                    data.bgImageUrl = bgImageUrl;
+                    gistData.files['records.json'].content = JSON.stringify(data);
+                    
+                    // 保存到Gist
+                    await axios.patch(`https://api.github.com/gists/${FIXED_GIST_ID}`, gistData, {
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
                     alert("背景保存成功！");
                 } catch (e) {
-                    showLoading(false);
-                    console.error("保存背景失败", e);
-                    alert("保存失败，请检查Token权限！");
+                    console.error("保存背景失败：", e);
+                    alert("保存背景失败，请检查Token权限或网络！");
                 }
+                showLoading(false);
             };
             reader.readAsDataURL(bgImageFile);
         }
@@ -527,14 +474,21 @@
         async function loadBgImage(token) {
             try {
                 const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
-                    headers: { Authorization: `token ${token}` }
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
                 });
-                const content = JSON.parse(res.data.files["records.json"].content);
-                if (content.bgImageUrl) {
-                    document.getElementById("mainBody").style.backgroundImage = `url(${content.bgImageUrl})`;
+                const content = res.data.files['records.json']?.content;
+                if (content) {
+                    const data = JSON.parse(content);
+                    if (data.bgImageUrl) {
+                        document.getElementById("mainBody").style.backgroundImage = `url(${data.bgImageUrl})`;
+                    }
                 }
             } catch (e) {
-                console.log("暂无背景图片");
+                console.log("加载背景失败：", e);
+                // 背景加载失败不影响主功能
             }
         }
 
@@ -546,86 +500,89 @@
                 return;
             }
             
-            const token = JSON.parse(tokenData).value;
+            const tokenObj = JSON.parse(tokenData);
+            const token = tokenObj.value;
             showLoading(true);
             
             try {
-                const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
-                    headers: { Authorization: `token ${token}` }
-                });
-                const content = JSON.parse(res.data.files["records.json"].content);
-                content.bgImageUrl = "";
-                
-                await axios.patch(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
+                // 获取现有数据
+                let gistData = {
                     files: {
-                        "records.json": { content: JSON.stringify(content) }
+                        "records.json": {
+                            content: JSON.stringify({ bgImageUrl: "", records: [] })
+                        }
                     }
-                }, { headers: { Authorization: `token ${token}` } });
+                };
                 
+                try {
+                    const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+                    const oldContent = res.data.files['records.json']?.content;
+                    if (oldContent) {
+                        gistData.files['records.json'].content = oldContent;
+                    }
+                } catch (e) {
+                    if (e.response?.status !== 404) {
+                        throw e;
+                    }
+                }
+                
+                // 重置背景
+                const data = JSON.parse(gistData.files['records.json'].content);
+                data.bgImageUrl = "";
+                gistData.files['records.json'].content = JSON.stringify(data);
+                
+                // 保存到Gist
+                await axios.patch(`https://api.github.com/gists/${FIXED_GIST_ID}`, gistData, {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                // 重置页面背景
                 document.getElementById("mainBody").style.backgroundImage = "none";
                 document.getElementById("mainBody").style.backgroundColor = "#f9f9f9";
                 
-                showLoading(false);
-                alert("背景已重置！");
+                alert("背景重置成功！");
             } catch (e) {
-                showLoading(false);
-                console.error("重置背景失败", e);
-                alert("重置失败！");
+                console.error("重置背景失败：", e);
+                alert("重置背景失败，请检查Token权限或网络！");
             }
-        }
-
-        // 媒体预览
-        function previewMedia(type) {
-            const fileInput = document.getElementById(`${type}Upload`);
-            const file = fileInput.files[0];
-            if (!file) return;
-            
-            previewFiles[type] = file;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const previewArea = document.getElementById("previewArea");
-                
-                // 移除同类型的旧预览
-                const oldPreviews = previewArea.querySelectorAll(`.preview-${type}`);
-                oldPreviews.forEach(el => el.remove());
-                
-                if (type === "image") {
-                    const img = document.createElement("img");
-                    img.src = e.target.result;
-                    img.className = "preview-img preview-image";
-                    previewArea.appendChild(img);
-                } else if (type === "video") {
-                    const video = document.createElement("video");
-                    video.src = e.target.result;
-                    video.className = "preview-video preview-video";
-                    video.controls = true;
-                    previewArea.appendChild(video);
-                }
-            };
-            
-            reader.readAsDataURL(file);
+            showLoading(false);
         }
 
         // 加载记录
         async function loadRecords(token) {
             showLoading(true);
             let records = [];
-            
             try {
                 const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
-                    headers: { Authorization: `token ${token}` }
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
                 });
-                const content = JSON.parse(res.data.files["records.json"].content);
-                records = content.records || [];
+                const content = res.data.files['records.json']?.content;
+                if (content) {
+                    const data = JSON.parse(content);
+                    records = data.records || [];
+                }
             } catch (e) {
-                console.log("创建新记录集合");
+                console.error("加载记录失败：", e);
+                if (e.response?.status === 404) {
+                    records = [];
+                } else {
+                    alert("加载记录失败，请检查Token是否正确！");
+                }
             }
-            
             // 按时间倒序排序
             records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            
-            // 渲染记录
             renderRecords(records);
             showLoading(false);
         }
@@ -635,42 +592,27 @@
             const recordsList = document.getElementById("recordsList");
             recordsList.innerHTML = "";
             
+            if (records.length === 0) {
+                recordsList.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">暂无记录，写点什么吧～</div>';
+                return;
+            }
+            
             records.forEach(record => {
-                const card = createRecordCard(record);
+                const card = document.createElement("div");
+                card.className = "record-card";
+                card.innerHTML = `
+                    <div class="record-header">
+                        <span class="record-type">${record.type}</span>
+                        <span class="record-time">${formatTimeShow(record.timestamp)}</span>
+                    </div>
+                    <div class="record-content">${record.content.replace(/\n/g, "<br>")}</div>
+                    <div class="record-actions">
+                        <button class="edit-btn" onclick="editRecord('${record.id}')">编辑</button>
+                        <button class="delete-btn" onclick="deleteRecord('${record.id}')">删除</button>
+                    </div>
+                `;
                 recordsList.appendChild(card);
             });
-        }
-
-        // 创建记录卡片
-        function createRecordCard(record) {
-            const card = document.createElement("div");
-            card.className = "record-card";
-            card.id = `record-${record.id}`;
-            
-            let mediaHtml = '';
-            if (record.imageUrl) {
-                mediaHtml += `<img src="${record.imageUrl}" alt="记录图片">`;
-            }
-            if (record.videoUrl) {
-                mediaHtml += `<video controls src="${record.videoUrl}"></video>`;
-            }
-            
-            card.innerHTML = `
-                <div class="record-header">
-                    <span class="record-time">${formatTime(record.timestamp)}</span>
-                    <span class="record-type">${record.type}</span>
-                </div>
-                <div class="record-content">${record.content.replace(/\n/g, "<br>")}</div>
-                <div class="record-media">
-                    ${mediaHtml}
-                </div>
-                <div class="record-actions">
-                    <button class="edit-btn" onclick="editRecord('${record.id}')">编辑</button>
-                    <button class="delete-btn" onclick="deleteRecord('${record.id}')">删除</button>
-                </div>
-            `;
-            
-            return card;
         }
 
         // 保存记录
@@ -689,141 +631,124 @@
                 return;
             }
             
-            const token = JSON.parse(tokenData).value;
+            const tokenObj = JSON.parse(tokenData);
+            const token = tokenObj.value;
             showLoading(true);
             
             try {
-                // 处理媒体文件
-                let imageUrl = "";
-                let videoUrl = "";
-                
-                if (previewFiles.image && previewFiles.image instanceof File) {
-                    imageUrl = await fileToBase64(previewFiles.image);
-                } else if (previewFiles.image && typeof previewFiles.image === 'string') {
-                    imageUrl = previewFiles.image;
-                }
-                
-                if (previewFiles.video && previewFiles.video instanceof File) {
-                    videoUrl = await fileToBase64(previewFiles.video);
-                } else if (previewFiles.video && typeof previewFiles.video === 'string') {
-                    videoUrl = previewFiles.video;
-                }
-                
-                // 构建记录
-                const record = {
-                    id: currentEditId || generateId(),
-                    type: type,
-                    content: content,
-                    timestamp: new Date().toISOString(),
-                    imageUrl: imageUrl,
-                    videoUrl: videoUrl
+                // 1. 先获取现有数据
+                let gistData = {
+                    files: {
+                        "records.json": {
+                            content: JSON.stringify({ bgImageUrl: "", records: [] })
+                        }
+                    }
                 };
-                
-                // 读取现有数据
-                let records = [];
-                let bgImageUrl = "";
                 
                 try {
                     const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
-                        headers: { Authorization: `token ${token}` }
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
                     });
-                    const content = JSON.parse(res.data.files["records.json"].content);
-                    records = content.records || [];
-                    bgImageUrl = content.bgImageUrl || "";
+                    const oldContent = res.data.files['records.json']?.content;
+                    if (oldContent) {
+                        gistData.files['records.json'].content = oldContent;
+                    }
                 } catch (e) {
-                    console.log("新建Gist");
+                    if (e.response?.status !== 404) {
+                        throw e;
+                    }
                 }
                 
-                // 编辑或新增
-                if (currentEditId) {
-                    records = records.map(r => r.id === currentEditId ? record : r);
-                } else {
-                    records.push(record);
-                }
-                
-                // 保存到云端
-                const data = {
-                    bgImageUrl: bgImageUrl,
-                    records: records
+                // 2. 解析并添加新记录
+                const data = JSON.parse(gistData.files['records.json'].content);
+                const newRecord = {
+                    id: Date.now() + "-" + Math.random().toString(36).substr(2, 9),
+                    type: type,
+                    content: content,
+                    timestamp: new Date().toISOString(),
+                    imageUrl: "",
+                    videoUrl: ""
                 };
                 
-                await axios.patch(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
-                    files: {
-                        "records.json": { content: JSON.stringify(data) }
+                if (!data.records) data.records = [];
+                
+                if (currentEditId) {
+                    // 编辑模式
+                    const index = data.records.findIndex(r => r.id === currentEditId);
+                    if (index !== -1) {
+                        data.records[index] = newRecord;
                     }
-                }, { headers: { Authorization: `token ${token}` } });
+                    currentEditId = null;
+                } else {
+                    // 新增模式
+                    data.records.push(newRecord);
+                }
                 
-                // 重置编辑状态
-                resetEditState();
+                // 3. 保存更新后的数据
+                gistData.files['records.json'].content = JSON.stringify(data);
                 
-                // 重新加载记录
+                await axios.patch(`https://api.github.com/gists/${FIXED_GIST_ID}`, gistData, {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                // 4. 刷新列表
                 await loadRecords(token);
-                
-                showLoading(false);
+                resetEditState();
                 alert(currentEditId ? "记录编辑成功！" : "记录保存成功！");
             } catch (e) {
-                showLoading(false);
-                console.error("保存记录失败", e);
-                alert("保存失败，请检查Token权限！");
+                console.error("保存记录失败：", e);
+                alert("保存失败，请检查Token权限或网络！");
             }
+            showLoading(false);
         }
 
         // 编辑记录
-        async function editRecord(id) {
+        function editRecord(id) {
             const tokenData = localStorage.getItem(GITHUB_TOKEN_KEY);
             if (!tokenData) {
                 alert("请先授权！");
                 return;
             }
             
-            const token = JSON.parse(tokenData).value;
-            showLoading(true);
+            const tokenObj = JSON.parse(tokenData);
+            const token = tokenObj.value;
             
-            try {
-                const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
-                    headers: { Authorization: `token ${token}` }
-                });
-                
-                const content = JSON.parse(res.data.files["records.json"].content);
-                const record = content.records.find(r => r.id === id);
-                
-                if (record) {
-                    // 填充表单
-                    document.getElementById("contentType").value = record.type;
-                    document.getElementById("contentInput").value = record.content;
-                    currentEditId = id;
-                    
-                    // 预览媒体
-                    const previewArea = document.getElementById("previewArea");
-                    previewArea.innerHTML = "";
-                    
-                    if (record.imageUrl) {
-                        const img = document.createElement("img");
-                        img.src = record.imageUrl;
-                        img.className = "preview-img preview-image";
-                        previewArea.appendChild(img);
-                        previewFiles.image = record.imageUrl;
-                    }
-                    if (record.videoUrl) {
-                        const video = document.createElement("video");
-                        video.src = record.videoUrl;
-                        video.className = "preview-video preview-video";
-                        video.controls = true;
-                        previewArea.appendChild(video);
-                        previewFiles.video = record.videoUrl;
-                    }
-                    
-                    // 切换按钮状态
-                    document.getElementById("editTitle").textContent = "✏️ 编辑记事";
-                    document.getElementById("cancelEditBtn").classList.remove("hidden");
+            // 加载当前记录数据
+            showLoading(true);
+            axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
                 }
-                
+            }).then(res => {
+                const content = res.data.files['records.json']?.content;
+                if (content) {
+                    const data = JSON.parse(content);
+                    const record = data.records.find(r => r.id === id);
+                    if (record) {
+                        // 填充表单
+                        document.getElementById("contentType").value = record.type;
+                        document.getElementById("contentInput").value = record.content;
+                        currentEditId = id;
+                        
+                        // 切换按钮状态
+                        document.getElementById("editTitle").textContent = "✏️ 编辑记录";
+                        document.getElementById("cancelEditBtn").classList.remove("hidden");
+                    }
+                }
+            }).catch(e => {
+                console.error("加载编辑记录失败：", e);
+                alert("加载记录失败！");
+            }).finally(() => {
                 showLoading(false);
-            } catch (e) {
-                showLoading(false);
-                console.error("编辑记录失败", e);
-                alert("编辑失败！");
-            }
+            });
         }
 
         // 删除记录
@@ -836,36 +761,58 @@
                 return;
             }
             
-            const token = JSON.parse(tokenData).value;
+            const tokenObj = JSON.parse(tokenData);
+            const token = tokenObj.value;
             showLoading(true);
             
             try {
+                // 获取现有数据
                 const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
-                    headers: { Authorization: `token ${token}` }
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
                 });
                 
-                const content = JSON.parse(res.data.files["records.json"].content);
-                const records = content.records.filter(r => r.id !== id);
-                const bgImageUrl = content.bgImageUrl || "";
+                const oldContent = res.data.files['records.json']?.content;
+                let data = { bgImageUrl: "", records: [] };
+                if (oldContent) {
+                    data = JSON.parse(oldContent);
+                }
                 
-                await axios.patch(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
+                // 删除指定记录
+                data.records = data.records.filter(r => r.id !== id);
+                
+                // 保存更新后的数据
+                const gistData = {
                     files: {
-                        "records.json": { content: JSON.stringify({ bgImageUrl, records }) }
+                        "records.json": {
+                            content: JSON.stringify(data)
+                        }
                     }
-                }, { headers: { Authorization: `token ${token}` } });
+                };
                 
+                await axios.patch(`https://api.github.com/gists/${FIXED_GIST_ID}`, gistData, {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                // 刷新列表
                 await loadRecords(token);
-                showLoading(false);
                 alert("记录删除成功！");
             } catch (e) {
-                showLoading(false);
-                console.error("删除记录失败", e);
-                alert("删除失败！");
+                console.error("删除记录失败：", e);
+                alert("删除失败，请检查Token权限或网络！");
             }
+            showLoading(false);
         }
 
         // 取消编辑
         function cancelEdit() {
+            currentEditId = null;
             resetEditState();
         }
 
@@ -873,45 +820,11 @@
         function resetEditState() {
             document.getElementById("contentType").value = "日常思考";
             document.getElementById("contentInput").value = "";
-            document.getElementById("previewArea").innerHTML = "";
-            document.getElementById("editTitle").textContent = "✍️ 小屋记事";
+            document.getElementById("editTitle").textContent = "✍️ 写点什么";
             document.getElementById("cancelEditBtn").classList.add("hidden");
-            
-            // 清空文件输入
-            document.getElementById("imageUpload").value = "";
-            document.getElementById("videoUpload").value = "";
-            
-            currentEditId = null;
-            previewFiles = { image: null, video: null };
-            bgImageFile = null;
         }
 
-        // 工具函数
-        function generateId() {
-            return Date.now() + "-" + Math.random().toString(36).substr(2, 9);
-        }
-
-        function formatTime(isoString) {
-            const date = new Date(isoString);
-            return date.toLocaleString("zh-CN", {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit"
-            });
-        }
-
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = e => resolve(e.target.result);
-                reader.onerror = e => reject(e);
-                reader.readAsDataURL(file);
-            });
-        }
-
+        // 显示/隐藏加载层
         function showLoading(show) {
             const overlay = document.getElementById("loadingOverlay");
             if (show) {
@@ -919,6 +832,19 @@
             } else {
                 overlay.classList.add("hidden");
             }
+        }
+
+        // 格式化时间显示
+        function formatTimeShow(isoTime) {
+            const date = new Date(isoTime);
+            return date.toLocaleString("zh-CN", {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
         }
     </script>
 </body>
