@@ -29,14 +29,14 @@
             padding: 20px;
             background: rgba(255, 255, 255, 0.95);
             border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 10px rgba(255,255,255,0.05);
         }
         /* 背景设置区 */
         .bg-settings {
             background: rgba(255, 255, 255, 0.95);
             padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 10px rgba(255,255,255,0.08);
             margin-bottom: 20px;
             text-align: center;
         }
@@ -194,12 +194,12 @@
 <body id="mainBody">
     <div class="header">
         <h1>小屋一间 📝</h1>
-        <p>纯文字记录 + 本地背景，安全又好看</p>
+        <p>命运奖励清晰的要求，忽略模糊的欲望</p>
     </div>
 
     <!-- 背景设置区 - 和之前操作一样 -->
     <div class="bg-settings">
-        <h3>🎨 装扮小屋（背景仅保存在当前设备）</h3>
+        <h3>🎨 装扮小屋</h3>
         <div class="bg-controls">
             <input type="file" id="bgImageUpload" accept="image/*" onchange="previewBgImage(event)">
             <button class="bg-btn" onclick="saveBgImage()">保存背景</button>
@@ -208,7 +208,7 @@
     </div>
 
     <div class="edit-panel">
-        <h3 id="editTitle">✍️ 写点什么</h3>
+        <h3 id="editTitle">🌿 写点什么</h3>
         <div class="input-group">
             <label for="contentType">记录类型</label>
             <select id="contentType">
@@ -216,6 +216,8 @@
                 <option value="今日完成">今日完成</option>
                 <option value="待办清单">待办清单</option>
                 <option value="书籍清单">书籍清单</option>
+                <option value="待看清单">待看清单</option>
+                <option value="想做什么呢">想做什么呢</option>
                 <option value="随手记">随手记</option>
                 <option value="其他">其他</option>
             </select>
@@ -357,7 +359,7 @@
                     if (index !== -1) data.records[index] = newRecord;
                     currentEditId = null;
                     document.getElementById("cancelEditBtn").style.display = "none";
-                    document.getElementById("editTitle").innerText = "✍️ 写点什么";
+                    document.getElementById("editTitle").innerText = "🌿 写点什么";
                 } else {
                     data.records.unshift(newRecord);
                 }
@@ -454,9 +456,10 @@
             currentEditId = null;
             document.getElementById("contentInput").value = "";
             document.getElementById("contentType").value = "日常思考";
-            document.getElementById("editTitle").innerText = "✍️ 写点什么";
+            document.getElementById("editTitle").innerText = "🌿 写点什么";
             document.getElementById("cancelEditBtn").style.display = "none";
         }
     </script>
 </body>
 </html>
+
