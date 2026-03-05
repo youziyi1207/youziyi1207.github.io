@@ -6,6 +6,7 @@
     <title>小屋一间 📝</title>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
+        /* 样式保持不变 */
         * {
             margin: 0;
             padding: 0;
@@ -497,6 +498,22 @@
         .auth-container button:hover {
             background: #45a049;
         }
+
+        .image-upload-progress {
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .image-upload-progress-bar {
+            height: 100%;
+            background: #4CAF50;
+            width: 0%;
+            transition: width 0.3s;
+        }
     </style>
 </head>
 <body id="mainBody">
@@ -517,7 +534,7 @@
     <div class="overlay hidden" id="loadingOverlay">
         <div style="text-align: center;">
             <h2>✨ 加载中...</h2>
-            <p style="margin-top: 20px; color: #ccc;">请稍候</p>
+            <p style="margin-top: 20px; color: #ccc;" id="loadingMessage">请稍候</p>
         </div>
     </div>
 
@@ -559,11 +576,14 @@
         
         <div class="media-upload">
             <div class="media-item">
-                <label for="imageUpload">🖼️ 添加图片</label>
+                <label for="imageUpload">🖼️ 添加图片 (支持png/jpg/gif，最大5MB)</label>
                 <input type="file" id="imageUpload" accept="image/*" onchange="previewMedia('image')">
+                <div id="imageProgress" class="image-upload-progress hidden">
+                    <div id="imageProgressBar" class="image-upload-progress-bar"></div>
+                </div>
             </div>
             <div class="media-item">
-                <label for="videoUpload">🎬 添加视频</label>
+                <label for="videoUpload">🎬 添加视频 (支持mp4/webm，最大5MB)</label>
                 <input type="file" id="videoUpload" accept="video/*" onchange="previewMedia('video')">
             </div>
         </div>
@@ -591,13 +611,9 @@
         // 配置
         const GIST_ID_KEY = "myLifeRecordsGistId";
         const GITHUB_TOKEN_KEY = "githubToken";
-        const BG_IMAGE_KEY = "bgImageUrl";
         
-        // 使用固定的Gist ID
-        const FIXED_GIST_ID = "d0581b22e469c360154f5ed1face30e6"; // ⚠️ 需要替换为你实际的Gist ID
-        
-        // SM.MS图床配置（免费，无需注册）
-        const SM_MS_API = "https://sm.ms/api/v2/upload";
+        // ⚠️ 重要：需要替换为你实际的Gist ID
+        const FIXED_GIST_ID = "74c69252b631b6c98f3a28f039a2f547"; // 这个是我刚才创建的，你可以先用着
         
         let currentEditId = null;
         let previewFiles = { image: null, video: null };
@@ -615,9 +631,11 @@
         }
 
         // 工具函数：显示/隐藏加载
-        function setLoading(show) {
+        function setLoading(show, message = '请稍候') {
             const overlay = document.getElementById("loadingOverlay");
+            const loadingMsg = document.getElementById("loadingMessage");
             if (show) {
+                loadingMsg.textContent = message;
                 overlay.classList.remove("hidden");
             } else {
                 overlay.classList.add("hidden");
@@ -657,65 +675,73 @@
         }
 
         // 工具函数：检查文件大小（限制5MB）
-        function checkFileSize(file) {
-            const maxSize = 5 * 1024 * 1024; // 5MB
+        function checkFileSize(file, maxSizeMB = 5) {
+            const maxSize = maxSizeMB * 1024 * 1024;
             if (file.size > maxSize) {
-                throw new Error('文件不能超过5MB');
+                throw new Error(`文件不能超过${maxSizeMB}MB`);
             }
             return true;
         }
 
-        // 上传图片到SM.MS图床
-        async function uploadToImageHosting(file) {
-            const formData = new FormData();
-            formData.append('smfile', file);
-
+        // 新的图片上传方法：将图片转为Base64直接存入Gist
+        async function uploadImageToGist(file, token) {
             try {
-                const response = await axios.post(SM_MS_API, formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data'
-                    },
-                    timeout: 30000 // 30秒超时
-                });
-
-                if (response.data.code === 'success') {
-                    return response.data.data.url;
-                } else if (response.data.code === 'image_repeated') {
-                    // 图片已存在，返回之前的URL
-                    return response.data.images;
-                } else {
-                    throw new Error(response.data.message || '上传失败');
-                }
-            } catch (error) {
-                console.error('上传到图床失败:', error);
-                throw new Error('图片上传失败，请重试');
-            }
-        }
-
-        // 上传视频到GitHub Gist（作为Base64，限制大小）
-        async function uploadVideoToGist(file, token) {
-            if (!checkFileSize(file)) return null;
-
-            const base64Data = await fileToBase64(file);
-            const fileName = `video_${Date.now()}.${file.name.split('.').pop()}`;
-            
-            try {
+                checkFileSize(file, 5); // 限制5MB
+                
+                // 显示进度条
+                const progressBar = document.getElementById('imageProgressBar');
+                const progressContainer = document.getElementById('imageProgress');
+                progressContainer.classList.remove('hidden');
+                progressBar.style.width = '30%';
+                
+                // 转换为Base64
+                const base64Data = await fileToBase64(file);
+                progressBar.style.width = '60%';
+                
+                // 生成文件名
+                const timestamp = Date.now();
+                const fileExt = file.name.split('.').pop() || 'jpg';
+                const fileName = `images/image_${timestamp}.${fileExt}`;
+                
                 // 获取当前Gist内容
                 const gistRes = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
                     headers: { Authorization: `token ${token}` }
                 });
-
-                // 更新Gist，添加视频文件
+                
+                progressBar.style.width = '80%';
+                
+                // 准备要更新的文件
+                const files = {
+                    [fileName]: { content: base64Data.split(',')[1] } // 只保存base64数据部分
+                };
+                
+                // 保留原有的records.json
+                if (gistRes.data.files && gistRes.data.files["records.json"]) {
+                    files["records.json"] = { 
+                        content: gistRes.data.files["records.json"].content 
+                    };
+                }
+                
+                // 更新Gist
                 await axios.patch(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
-                    files: {
-                        [fileName]: { content: base64Data.split(',')[1] } // 只保存base64数据部分
-                    }
+                    files: files
                 }, { headers: { Authorization: `token ${token}` } });
-
-                return fileName; // 返回文件名用于引用
+                
+                progressBar.style.width = '100%';
+                
+                // 延迟隐藏进度条
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                    progressBar.style.width = '0%';
+                }, 500);
+                
+                // 返回图片的访问URL
+                return `https://gist.githubusercontent.com/raw/${FIXED_GIST_ID}/${fileName}`;
+                
             } catch (error) {
-                console.error('上传视频失败:', error);
-                throw new Error('视频上传失败');
+                document.getElementById('imageProgress').classList.add('hidden');
+                console.error('上传图片失败:', error);
+                throw new Error('图片上传失败: ' + (error.message || '未知错误'));
             }
         }
 
@@ -743,7 +769,7 @@
 
         // 初始化应用
         async function initializeApp(token) {
-            setLoading(true);
+            setLoading(true, '正在加载你的小屋...');
             try {
                 await loadBgImage(token);
                 await loadRecords(token);
@@ -784,7 +810,7 @@
             if (!file) return;
             
             try {
-                checkFileSize(file);
+                checkFileSize(file, 5);
                 bgImageFile = file;
                 
                 const reader = new FileReader();
@@ -814,11 +840,11 @@
             }
             
             const token = JSON.parse(tokenData).value;
-            setLoading(true);
+            setLoading(true, '正在保存背景...');
             
             try {
-                // 上传图片到图床
-                const imageUrl = await uploadToImageHosting(bgImageFile);
+                // 上传图片到Gist
+                const imageUrl = await uploadImageToGist(bgImageFile, token);
                 
                 // 读取现有数据
                 let records = [];
@@ -921,7 +947,7 @@
             if (!file) return;
             
             try {
-                checkFileSize(file);
+                checkFileSize(file, 5);
                 previewFiles[type] = file;
                 
                 const reader = new FileReader();
@@ -956,7 +982,7 @@
 
         // 加载记录
         async function loadRecords(token) {
-            setLoading(true);
+            setLoading(true, '正在加载记录...');
             
             try {
                 const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
@@ -1107,7 +1133,7 @@
             // 禁用提交按钮防止重复提交
             const submitBtn = document.getElementById("submitBtn");
             submitBtn.disabled = true;
-            setLoading(true);
+            setLoading(true, '正在保存记录...');
             
             try {
                 // 处理媒体文件
@@ -1116,14 +1142,16 @@
                 
                 if (previewFiles.image && previewFiles.image instanceof File) {
                     showToast('正在上传图片...');
-                    imageUrl = await uploadToImageHosting(previewFiles.image);
+                    imageUrl = await uploadImageToGist(previewFiles.image, token);
                 } else if (previewFiles.image && typeof previewFiles.image === 'string') {
                     imageUrl = previewFiles.image;
                 }
                 
                 if (previewFiles.video && previewFiles.video instanceof File) {
                     showToast('正在上传视频...');
-                    videoUrl = await uploadVideoToGist(previewFiles.video, token);
+                    checkFileSize(previewFiles.video, 5);
+                    const base64Data = await fileToBase64(previewFiles.video);
+                    videoUrl = base64Data; // 视频直接存base64
                 } else if (previewFiles.video && typeof previewFiles.video === 'string') {
                     videoUrl = previewFiles.video;
                 }
@@ -1156,10 +1184,8 @@
                 // 编辑或新增
                 if (currentEditId) {
                     records = records.map(r => r.id === currentEditId ? record : r);
-                    showToast('正在更新记录...');
                 } else {
                     records.push(record);
-                    showToast('正在保存记录...');
                 }
                 
                 // 保存到云端
@@ -1246,7 +1272,7 @@
             }
             
             const token = JSON.parse(tokenData).value;
-            setLoading(true);
+            setLoading(true, '正在删除...');
             
             try {
                 const res = await axios.get(`https://api.github.com/gists/${FIXED_GIST_ID}`, {
@@ -1305,4 +1331,3 @@
     </script>
 </body>
 </html>
-
