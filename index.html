@@ -31,7 +31,6 @@
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
-        /* 背景设置区 */
         .bg-settings {
             background: rgba(255, 255, 255, 0.95);
             padding: 20px;
@@ -171,7 +170,37 @@
             padding: 20px;
             color: #999;
         }
-        /* 响应式适配 - 手机优化 */
+        /* 登录界面 */
+        .login-container {
+            background: rgba(255,255,255,0.95);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            max-width: 400px;
+            margin: 50px auto;
+            text-align: center;
+        }
+        .login-container h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .login-input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .login-btn {
+            background: #2196F3;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: white;
+            border: none;
+            font-size: 16px;
+        }
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -193,67 +222,116 @@
     </style>
 </head>
 <body id="mainBody">
-    <div class="header">
-        <h1>小屋一间 📝</h1>
-        <p>命运奖励清晰的要求，忽略模糊的欲望</p>
+
+    <!-- 登录界面（默认隐藏） -->
+    <div class="login-container" id="loginPanel" style="display: none;">
+        <h2>请输入 Token 进入小屋</h2>
+        <input type="password" class="login-input" id="tokenInput" placeholder="在这里输入你的 GitHub Token">
+        <button class="login-btn" onclick="login()">登录</button>
     </div>
 
-    <!-- 背景设置区 - 和之前操作一样 -->
-    <div class="bg-settings">
-        <h3>🎨 装扮小屋</h3>
-        <div class="bg-controls">
-            <input type="file" id="bgImageUpload" accept="image/*" onchange="previewBgImage(event)">
-            <button class="bg-btn" onclick="saveBgImage()">保存背景</button>
-            <button class="bg-btn" onclick="resetBg()">重置背景</button>
+    <!-- 主界面（默认隐藏） -->
+    <div id="mainPanel" style="display: none;">
+        <div class="header">
+            <h1>小屋一间 📝</h1>
+            <p>命运奖励清晰的要求，忽略模糊的欲望</p>
         </div>
-    </div>
 
-    <div class="edit-panel">
-        <h3 id="editTitle">🌿 写点什么</h3>
-        <div class="input-group">
-            <label for="contentType">记录类型</label>
-            <select id="contentType">
-                <option value="日常思考">日常思考</option>
-                <option value="今日完成">今日完成</option>
-                <option value="待办清单">待办清单</option>
-                <option value="书籍清单">书籍清单</option>
-                <option value="待看清单">待看清单</option>
-                <option value="想做什么呢">想做什么呢</option>
-                <option value="随手记">随手记</option>
-                <option value="其他">其他</option>
-            </select>
+        <div class="bg-settings">
+            <h3>🎨 装扮小屋</h3>
+            <div class="bg-controls">
+                <input type="file" id="bgImageUpload" accept="image/*" onchange="previewBgImage(event)">
+                <button class="bg-btn" onclick="saveBgImage()">保存背景</button>
+                <button class="bg-btn" onclick="resetBg()">重置背景</button>
+                <!-- 一键清除Token按钮 -->
+                <button class="bg-btn" onclick="clearToken()" style="background:#ff4444;color:white;">🔒 一键清除Token</button>
+            </div>
         </div>
-        <div class="input-group">
-            <label for="contentInput">记录内容</label>
-            <textarea id="contentInput" placeholder="输入你想记录的内容..."></textarea>
-        </div>
-        <div class="btn-group">
-            <button id="submitBtn" onclick="saveRecord()">保存记录</button>
-            <button id="cancelEditBtn" onclick="cancelEdit()">取消编辑</button>
-        </div>
-    </div>
 
-    <div class="records-list" id="recordsList"></div>
+        <div class="edit-panel">
+            <h3 id="editTitle">🌿 写点什么</h3>
+            <div class="input-group">
+                <label for="contentType">记录类型</label>
+                <select id="contentType">
+                    <option value="日常思考">日常思考</option>
+                    <option value="今日完成">今日完成</option>
+                    <option value="待办清单">待办清单</option>
+                    <option value="书籍清单">书籍清单</option>
+                    <option value="待看清单">待看清单</option>
+                    <option value="想做什么呢">想做什么呢</option>
+                    <option value="随手记">随手记</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="contentInput">记录内容</label>
+                <textarea id="contentInput" placeholder="输入你想记录的内容..."></textarea>
+            </div>
+            <div class="btn-group">
+                <button id="submitBtn" onclick="saveRecord()">保存记录</button>
+                <button id="cancelEditBtn" onclick="cancelEdit()">取消编辑</button>
+            </div>
+        </div>
+
+        <div class="records-list" id="recordsList"></div>
+    </div>
 
     <script>
-        // 核心配置（已填好，不用改）
         const GIST_ID = "6a8d39078fcac39d10639b6a4261b2b4";
-        // Token 做简单拆分，避免GitHub扫描（功能完全不受影响）
-        const TOKEN_PART1 = "ghp_OJRagvee2KjsqULArgva9B7";
-        const TOKEN_PART2 = "abjv1IS0iboKe";
-        const TOKEN = TOKEN_PART1 + TOKEN_PART2;
         
         let currentEditId = null;
         let bgImageFile = null;
 
-        // 页面加载：1.加载记录 2.加载本地背景
+        // 页面加载：判断是否已登录
         window.onload = function() {
-            loadRecords();
-            loadLocalBg();
+            const token = localStorage.getItem('githubToken');
+            if (!token) {
+                showLogin();
+            } else {
+                showMain();
+                loadRecords();
+                loadLocalBg();
+            }
         };
 
-        // ---------------------- 背景相关功能（本地存储，不上传GitHub） ----------------------
-        // 预览背景图
+        // 显示登录
+        function showLogin() {
+            document.getElementById('loginPanel').style.display = 'block';
+            document.getElementById('mainPanel').style.display = 'none';
+        }
+
+        // 显示主界面
+        function showMain() {
+            document.getElementById('loginPanel').style.display = 'none';
+            document.getElementById('mainPanel').style.display = 'block';
+        }
+
+        // 登录
+        function login() {
+            const token = document.getElementById('tokenInput').value.trim();
+            if (!token) {
+                alert('请输入Token');
+                return;
+            }
+            localStorage.setItem('githubToken', token);
+            showMain();
+            loadRecords();
+            loadLocalBg();
+        }
+
+        // 一键清除Token（锁门）
+        function clearToken() {
+            if (!confirm('确定要清除Token吗？清除后需重新输入才能进入！')) return;
+            localStorage.removeItem('githubToken');
+            location.reload();
+        }
+
+        // 获取当前Token
+        function getToken() {
+            return localStorage.getItem('githubToken');
+        }
+
+        // ---------------------- 背景相关 ----------------------
         function previewBgImage(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -266,7 +344,6 @@
             reader.readAsDataURL(file);
         }
 
-        // 保存背景到本地
         function saveBgImage() {
             if (!bgImageFile) {
                 alert("请先选择背景图片！");
@@ -281,7 +358,6 @@
             reader.readAsDataURL(bgImageFile);
         }
 
-        // 加载本地保存的背景
         function loadLocalBg() {
             const bgUrl = localStorage.getItem("local_bg_image");
             if (bgUrl) {
@@ -289,7 +365,6 @@
             }
         }
 
-        // 重置背景
         function resetBg() {
             localStorage.removeItem("local_bg_image");
             document.getElementById("mainBody").style.backgroundImage = "none";
@@ -297,13 +372,12 @@
             alert("背景已重置为默认样式～");
         }
 
-        // ---------------------- 记录相关功能 ----------------------
-        // 加载记录
+        // ---------------------- 记录相关 ----------------------
         async function loadRecords() {
             try {
                 const res = await axios.get(`https://api.github.com/gists/${GIST_ID}`, {
                     headers: {
-                        'Authorization': `token ${TOKEN}`,
+                        'Authorization': `token ${getToken()}`,
                         'Accept': 'application/vnd.github.v3+json'
                     }
                 });
@@ -315,7 +389,6 @@
             }
         }
 
-        // 保存记录
         async function saveRecord() {
             const type = document.getElementById("contentType").value;
             const content = document.getElementById("contentInput").value.trim();
@@ -326,26 +399,23 @@
             }
 
             try {
-                // 1. 获取现有记录
                 let oldContent = '{"records":[]}';
                 try {
                     const res = await axios.get(`https://api.github.com/gists/${GIST_ID}`, {
-                        headers: { 'Authorization': `token ${TOKEN}` }
+                        headers: { 'Authorization': `token ${getToken()}` }
                     });
                     oldContent = res.data.files['records.json']?.content || oldContent;
                 } catch (e) {
-                    // 初始化records.json
                     await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
                         files: { "records.json": { content: oldContent } }
                     }, {
                         headers: {
-                            'Authorization': `token ${TOKEN}`,
+                            'Authorization': `token ${getToken()}`,
                             'Content-Type': 'application/json'
                         }
                     });
                 }
 
-                // 2. 构造新记录
                 const data = JSON.parse(oldContent);
                 const newRecord = {
                     id: currentEditId || Date.now().toString(),
@@ -354,7 +424,6 @@
                     time: new Date().toLocaleString()
                 };
 
-                // 编辑/新增逻辑
                 if (currentEditId) {
                     const index = data.records.findIndex(r => r.id === currentEditId);
                     if (index !== -1) data.records[index] = newRecord;
@@ -365,17 +434,15 @@
                     data.records.unshift(newRecord);
                 }
 
-                // 3. 保存到Gist
                 await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
                     files: { "records.json": { content: JSON.stringify(data) } }
                 }, {
                     headers: {
-                        'Authorization': `token ${TOKEN}`,
+                        'Authorization': `token ${getToken()}`,
                         'Content-Type': 'application/json'
                     }
                 });
 
-                // 4. 刷新列表
                 loadRecords();
                 document.getElementById("contentInput").value = "";
                 alert("记录保存成功！");
@@ -385,7 +452,6 @@
             }
         }
 
-        // 渲染记录列表
         function renderRecords(records) {
             const list = document.getElementById("recordsList");
             if (records.length === 0) {
@@ -411,10 +477,9 @@
             });
         }
 
-        // 编辑记录
         async function editRecord(id) {
             const res = await axios.get(`https://api.github.com/gists/${GIST_ID}`, {
-                headers: { 'Authorization': `token ${TOKEN}` }
+                headers: { 'Authorization': `token ${getToken()}` }
             });
             const content = res.data.files['records.json']?.content || '{"records":[]}';
             const data = JSON.parse(content);
@@ -429,13 +494,12 @@
             }
         }
 
-        // 删除记录
         async function deleteRecord(id) {
             if (!confirm("确定删除？")) return;
             
             try {
                 const res = await axios.get(`https://api.github.com/gists/${GIST_ID}`, {
-                    headers: { 'Authorization': `token ${TOKEN}` }
+                    headers: { 'Authorization': `token ${getToken()}` }
                 });
                 const content = res.data.files['records.json']?.content || '{"records":[]}';
                 const data = JSON.parse(content);
@@ -443,7 +507,7 @@
 
                 await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
                     files: { "records.json": { content: JSON.stringify(data) } }
-                }, { headers: { 'Authorization': `token ${TOKEN}` } });
+                }, { headers: { 'Authorization': `token ${getToken()}` } });
 
                 loadRecords();
                 alert("删除成功！");
@@ -452,7 +516,6 @@
             }
         }
 
-        // 取消编辑
         function cancelEdit() {
             currentEditId = null;
             document.getElementById("contentInput").value = "";
@@ -463,6 +526,3 @@
     </script>
 </body>
 </html>
-
-
-
